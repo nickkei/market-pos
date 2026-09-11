@@ -1519,11 +1519,10 @@
                                     )}
 
                                     <label className="flex-1 py-2 rounded-xl bg-sky-500 text-xs font-black text-white shadow-lg flex items-center justify-center gap-1 cursor-pointer">
-                                        <i className="fa-solid fa-image"></i> 相機/相簿
+                                        <i className="fa-solid fa-image"></i> 相簿選擇
                                         <input 
                                             type="file" 
                                             accept="image/*" 
-                                            capture="environment"
                                             className="hidden" 
                                             onChange={handlePhotoUpload}
                                         />
@@ -1559,23 +1558,34 @@
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="grid grid-cols-3 gap-1.5">
                                                 <button 
                                                     type="button"
                                                     onClick={() => setShowCamera(true)}
-                                                    className="flex flex-col items-center justify-center py-2.5 px-2 bg-amber-50 hover:bg-amber-100 border-2 border-amber-300 text-amber-900 rounded-2xl font-bold transition-all active:scale-95"
+                                                    className="flex flex-col items-center justify-center py-2.5 px-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 rounded-2xl font-bold transition-all active:scale-95"
                                                 >
-                                                    <i className="fa-solid fa-camera text-lg text-amber-600 mb-0.5"></i>
-                                                    <span className="text-[11px]">即時鏡頭</span>
+                                                    <i className="fa-solid fa-video text-base text-amber-600 mb-0.5"></i>
+                                                    <span className="text-[10px]">即時鏡頭</span>
                                                 </button>
 
-                                                <label className="flex flex-col items-center justify-center py-2.5 px-2 bg-sky-50 hover:bg-sky-100 border-2 border-sky-300 text-sky-900 rounded-2xl font-bold cursor-pointer transition-all active:scale-95">
-                                                    <i className="fa-solid fa-image text-lg text-sky-600 mb-0.5"></i>
-                                                    <span className="text-[11px]">相機/相簿上傳</span>
+                                                <label className="flex flex-col items-center justify-center py-2.5 px-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-2xl font-bold cursor-pointer transition-all active:scale-95">
+                                                    <i className="fa-solid fa-camera text-base text-emerald-600 mb-0.5"></i>
+                                                    <span className="text-[10px]">手機拍照</span>
                                                     <input 
                                                         type="file" 
                                                         accept="image/*" 
                                                         capture="environment"
+                                                        className="hidden" 
+                                                        onChange={handlePhotoUpload}
+                                                    />
+                                                </label>
+
+                                                <label className="flex flex-col items-center justify-center py-2.5 px-1 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-900 rounded-2xl font-bold cursor-pointer transition-all active:scale-95">
+                                                    <i className="fa-solid fa-image text-base text-sky-600 mb-0.5"></i>
+                                                    <span className="text-[10px]">相簿選擇</span>
+                                                    <input 
+                                                        type="file" 
+                                                        accept="image/*" 
                                                         className="hidden" 
                                                         onChange={handlePhotoUpload}
                                                     />
