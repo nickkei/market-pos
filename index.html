@@ -19,12 +19,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
 
     <style>
+        html {
+            font-size: 16px;
+        }
+        @media (max-width: 480px) {
+            html {
+                font-size: 17px; /* 手機端適當拉大整體基本單位 */
+            }
+        }
         body {
             font-family: 'Zen Maru Gothic', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             user-select: none;
             -webkit-user-select: none;
             touch-action: manipulation;
             background-color: #F8FAFC;
+        }
+        /* 適應手機瀏覽器網址列動態高度 */
+        .app-container {
+            height: 100vh;
+            height: 100dvh;
         }
         /* Custom scrollbars */
         ::-webkit-scrollbar {
@@ -249,27 +262,27 @@
             };
 
             return (
-                <div className="flex flex-col h-screen max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden border-x border-slate-200">
+                <div className="flex flex-col app-container w-full max-w-lg mx-auto bg-white shadow-2xl relative overflow-hidden border-x border-slate-200">
                     
                     {/* Header */}
-                    <header className="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 p-4 text-white shadow-md flex justify-between items-center z-10">
-                        <div className="flex items-center space-x-2">
-                            <span className="text-2xl bg-white/20 p-2 rounded-2xl backdrop-blur-sm">🏬</span>
+                    <header className="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 p-4 text-white shadow-md flex justify-between items-center z-10 shrink-0">
+                        <div className="flex items-center space-x-2.5">
+                            <span className="text-3xl bg-white/20 p-2 rounded-2xl backdrop-blur-sm">🏬</span>
                             <div>
-                                <h1 className="font-black text-lg leading-tight tracking-wide">小老闆文創市集助手</h1>
-                                <p className="text-xs text-amber-100 font-medium">簡單收銀 • 庫存管理 • 統計</p>
+                                <h1 className="font-black text-xl leading-tight tracking-wide">小老闆文創市集助手</h1>
+                                <p className="text-xs text-amber-100 font-bold">簡單收銀 • 庫存管理 • 統計</p>
                             </div>
                         </div>
-                        <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold border border-white/30 flex items-center gap-1">
-                            <span>🪙 營業額</span>
-                            <span className="text-yellow-100 text-sm font-extrabold">
+                        <div className="bg-white/20 backdrop-blur-md px-3 py-2 rounded-2xl text-xs font-bold border border-white/30 flex flex-col items-end">
+                            <span className="text-[11px] text-amber-100">🪙 總營業額</span>
+                            <span className="text-yellow-100 text-base font-extrabold">
                                 ${salesHistory.reduce((s, t) => s + t.totalAmount, 0)}
                             </span>
                         </div>
                     </header>
 
                     {/* Main Content Viewport */}
-                    <main className="flex-1 overflow-y-auto bg-slate-50 relative pb-20">
+                    <main className="flex-1 overflow-y-auto bg-slate-50 relative pb-24">
                         {activeTab === 'pos' && (
                             <PosView 
                                 products={products} 
@@ -402,15 +415,15 @@
                     {/* Product Grid */}
                     <div className="flex-1">
                         <div className="flex justify-between items-center mb-3">
-                            <span className="text-sm font-bold text-slate-600 flex items-center gap-1">
-                                <i className="fa-solid fa-store text-amber-500"></i> 點擊商品加入購物車
+                            <span className="text-sm font-extrabold text-slate-700 flex items-center gap-1.5">
+                                <i className="fa-solid fa-store text-amber-500 text-base"></i> 點擊商品加入購物車
                             </span>
-                            <span className="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded-full font-bold">
+                            <span className="text-xs bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full font-bold">
                                 共 {products.length} 項商品
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-3.5">
                             {products.map(product => {
                                 const inCart = cart.find(item => item.id === product.id);
                                 const isSoldOut = product.stock <= 0;
@@ -419,7 +432,7 @@
                                     <div 
                                         key={product.id}
                                         onClick={() => addToCart(product)}
-                                        className={`relative rounded-2xl p-3 border-2 transition-all duration-150 bounce-active flex flex-col justify-between h-36 ${
+                                        className={`relative rounded-3xl p-3.5 border-2 transition-all duration-150 bounce-active flex flex-col justify-between min-h-[150px] ${
                                             isSoldOut 
                                                 ? 'bg-slate-100 border-slate-200 opacity-60 grayscale cursor-not-allowed' 
                                                 : inCart 
@@ -429,8 +442,8 @@
                                     >
                                         {/* Sold Out Badge */}
                                         {isSoldOut && (
-                                            <div className="absolute inset-0 bg-slate-900/40 rounded-2xl backdrop-blur-[1px] flex items-center justify-center z-10">
-                                                <span className="bg-rose-600 text-white font-black text-sm px-3 py-1 rounded-full shadow-lg transform -rotate-12 tracking-widest border border-white">
+                                            <div className="absolute inset-0 bg-slate-900/40 rounded-3xl backdrop-blur-[1px] flex items-center justify-center z-10">
+                                                <span className="bg-rose-600 text-white font-black text-base px-3.5 py-1.5 rounded-full shadow-lg transform -rotate-12 tracking-widest border border-white">
                                                     售罄 SOLD OUT
                                                 </span>
                                             </div>
@@ -438,26 +451,30 @@
 
                                         {/* Cart Qty Badge */}
                                         {inCart && (
-                                            <div className="absolute -top-2 -right-2 bg-amber-500 text-white font-black rounded-full w-7 h-7 flex items-center justify-center text-sm shadow-md border-2 border-white z-10 pop-in">
+                                            <div className="absolute -top-2.5 -right-2.5 bg-amber-500 text-white font-black rounded-full w-8 h-8 flex items-center justify-center text-base shadow-md border-2 border-white z-10 pop-in">
                                                 {inCart.qty}
                                             </div>
                                         )}
 
                                         <div className="flex justify-between items-start">
-                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-inner ${product.color || 'bg-amber-100 text-amber-600'}`}>
-                                                {product.icon || '🎁'}
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-inner overflow-hidden ${product.color || 'bg-amber-100 text-amber-600'}`}>
+                                                {product.image ? (
+                                                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    product.icon || '🎁'
+                                                )}
                                             </div>
                                             <div className="text-right">
                                                 <span className="text-xs font-bold text-slate-400 block">庫存</span>
-                                                <span className={`text-xs font-extrabold px-1.5 py-0.5 rounded ${product.stock <= 3 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
+                                                <span className={`text-xs font-extrabold px-2 py-0.5 rounded-md ${product.stock <= 3 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-700'}`}>
                                                     {product.stock}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        <div>
-                                            <h3 className="font-bold text-slate-800 text-sm truncate leading-tight">{product.name}</h3>
-                                            <p className="text-amber-600 font-black text-lg mt-0.5">
+                                        <div className="mt-2">
+                                            <h3 className="font-bold text-slate-800 text-base truncate leading-tight">{product.name}</h3>
+                                            <p className="text-amber-600 font-black text-xl mt-1">
                                                 ${product.price}
                                             </p>
                                         </div>
@@ -469,53 +486,53 @@
 
                     {/* Floating Cart Bottom Bar */}
                     {cart.length > 0 && (
-                        <div className="sticky bottom-2 bg-slate-900 text-white rounded-2xl p-3 shadow-2xl border border-slate-700 flex flex-col gap-2 pop-in z-20">
+                        <div className="sticky bottom-3 bg-slate-900 text-white rounded-3xl p-3.5 shadow-2xl border border-slate-700 flex flex-col gap-2.5 pop-in z-20">
                             {/* Quick Item List */}
-                            <div className="max-h-24 overflow-y-auto divide-y divide-slate-800 px-1">
+                            <div className="max-h-28 overflow-y-auto divide-y divide-slate-800 px-1">
                                 {cart.map(item => (
-                                    <div key={item.id} className="py-1.5 flex justify-between items-center text-xs">
-                                        <span className="font-bold truncate max-w-[120px]">{item.product.name}</span>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-slate-400">${item.product.price}</span>
-                                            <div className="flex items-center bg-slate-800 rounded-lg border border-slate-700">
+                                    <div key={item.id} className="py-2 flex justify-between items-center text-xs">
+                                        <span className="font-bold text-sm truncate max-w-[130px]">{item.product.name}</span>
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="text-slate-400 text-xs">${item.product.price}</span>
+                                            <div className="flex items-center bg-slate-800 rounded-xl border border-slate-700">
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); updateCartQty(item.id, -1); }}
-                                                    className="w-6 h-6 flex items-center justify-center text-amber-400 font-bold active:bg-slate-700 rounded-l-lg"
+                                                    className="w-8 h-8 flex items-center justify-center text-amber-400 font-black text-base active:bg-slate-700 rounded-l-xl"
                                                 >
                                                     -
                                                 </button>
-                                                <span className="w-5 text-center font-bold text-amber-300">{item.qty}</span>
+                                                <span className="w-6 text-center font-black text-amber-300 text-sm">{item.qty}</span>
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); updateCartQty(item.id, 1); }}
-                                                    className="w-6 h-6 flex items-center justify-center text-amber-400 font-bold active:bg-slate-700 rounded-r-lg"
+                                                    className="w-8 h-8 flex items-center justify-center text-amber-400 font-black text-base active:bg-slate-700 rounded-r-xl"
                                                 >
                                                     +
                                                 </button>
                                             </div>
-                                            <span className="font-bold text-amber-400 w-10 text-right">${item.product.price * item.qty}</span>
+                                            <span className="font-black text-amber-400 text-sm w-12 text-right">${item.product.price * item.qty}</span>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
                             {/* Cart Action Footer */}
-                            <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+                            <div className="flex justify-between items-center pt-2.5 border-t border-slate-800">
                                 <button 
                                     onClick={clearCart}
-                                    className="text-xs text-rose-400 hover:text-rose-300 font-bold px-2 py-1 rounded bg-rose-950/50 border border-rose-800/50"
+                                    className="text-xs text-rose-400 hover:text-rose-300 font-bold px-3 py-2 rounded-xl bg-rose-950/50 border border-rose-800/50"
                                 >
                                     清空
                                 </button>
 
                                 <div className="flex items-center gap-3">
                                     <div className="text-right">
-                                        <span className="text-[10px] text-slate-400 block">共 {cartItemCount} 件</span>
-                                        <span className="text-xl font-black text-amber-300">${cartTotal}</span>
+                                        <span className="text-[11px] text-slate-400 block font-bold">共 {cartItemCount} 件</span>
+                                        <span className="text-2xl font-black text-amber-300">${cartTotal}</span>
                                     </div>
 
                                     <button 
                                         onClick={openCheckout}
-                                        className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-black px-5 py-2.5 rounded-xl text-base shadow-lg bounce-active flex items-center gap-1.5"
+                                        className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-900 font-black px-6 py-3 rounded-2xl text-lg shadow-lg bounce-active flex items-center gap-2"
                                     >
                                         <span>結帳</span>
                                         <i className="fa-solid fa-arrow-right"></i>
@@ -559,8 +576,12 @@
                         {products.map(product => (
                             <div key={product.id} className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
                                 <div className="flex items-center space-x-3">
-                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shadow-inner ${product.color || 'bg-amber-100 text-amber-600'}`}>
-                                        {product.icon || '🎁'}
+                                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shadow-inner overflow-hidden ${product.color || 'bg-amber-100 text-amber-600'}`}>
+                                        {product.image ? (
+                                            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            product.icon || '🎁'
+                                        )}
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-slate-800 text-sm">{product.name}</h3>
@@ -1001,31 +1022,102 @@
             const [price, setPrice] = React.useState(product?.price || 10);
             const [stock, setStock] = React.useState(product?.stock || 10);
             const [icon, setIcon] = React.useState(product?.icon || '🎨');
+            const [image, setImage] = React.useState(product?.image || '');
 
             const EMOJI_OPTIONS = ['🎨', '🖼️', '🔑', '📿', '🏷️', '🧸', '🧶', '🪴', '🧦', '🧁', '🍪', '📖'];
 
+            // 處理手機拍攝/上傳圖片壓縮
+            const handlePhotoUpload = (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 300; // 壓縮縮圖，保持順暢
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                        setImage(compressedBase64);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
             return (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in">
-                    <div className="bg-white w-full max-w-xs rounded-3xl p-5 shadow-2xl space-y-4">
+                    <div className="bg-white w-full max-w-xs rounded-3xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
                         <h3 className="font-black text-base text-slate-800">
                             {product ? '修改商品資料' : '新增市集商品'}
                         </h3>
 
                         <div className="space-y-3 text-xs">
+                            {/* 拍照 / 上傳圖片區域 */}
                             <div>
-                                <label className="font-bold text-slate-600 block mb-1">商品圖標</label>
-                                <div className="grid grid-cols-6 gap-1 bg-slate-50 p-2 rounded-xl">
-                                    {EMOJI_OPTIONS.map(e => (
+                                <label className="font-bold text-slate-600 block mb-1">商品相片 / 圖示</label>
+                                
+                                {image ? (
+                                    <div className="flex items-center space-x-3 bg-slate-50 p-2 rounded-2xl border border-slate-200">
+                                        <img src={image} alt="預覽" className="w-14 h-14 object-cover rounded-xl shadow-sm border border-white shrink-0" />
+                                        <div className="flex-1">
+                                            <p className="font-bold text-slate-700 text-xs">已使用自訂相片</p>
+                                            <p className="text-[10px] text-slate-400">已自動為您最佳化尺寸</p>
+                                        </div>
                                         <button 
-                                            key={e} 
                                             type="button"
-                                            onClick={() => setIcon(e)}
-                                            className={`p-1.5 rounded-lg text-lg ${icon === e ? 'bg-amber-300 shadow-sm' : 'hover:bg-slate-200'}`}
+                                            onClick={() => setImage('')}
+                                            className="text-xs text-rose-500 hover:text-rose-700 font-bold p-2 bg-rose-50 rounded-xl shrink-0"
                                         >
-                                            {e}
+                                            移除
                                         </button>
-                                    ))}
-                                </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <label className="flex items-center justify-center gap-2 w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 border-2 border-dashed border-amber-300 text-amber-800 rounded-xl font-bold cursor-pointer transition-colors active:scale-98">
+                                            <i className="fa-solid fa-camera text-base text-amber-600"></i>
+                                            <span>拍照 / 選擇商品相片</span>
+                                            <input 
+                                                type="file" 
+                                                accept="image/*" 
+                                                className="hidden" 
+                                                onChange={handlePhotoUpload}
+                                            />
+                                        </label>
+
+                                        <div className="text-center text-[10px] text-slate-400 font-bold">或選擇預設圖示</div>
+                                        <div className="grid grid-cols-6 gap-1 bg-slate-50 p-2 rounded-xl">
+                                            {EMOJI_OPTIONS.map(e => (
+                                                <button 
+                                                    key={e} 
+                                                    type="button"
+                                                    onClick={() => { setIcon(e); setImage(''); }}
+                                                    className={`p-1.5 rounded-lg text-lg ${icon === e && !image ? 'bg-amber-300 shadow-sm' : 'hover:bg-slate-200'}`}
+                                                >
+                                                    {e}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -1079,7 +1171,7 @@
                             <button 
                                 onClick={() => {
                                     if(!name) return alert('請輸入商品名稱');
-                                    onSave({ ...product, name, price, stock, icon });
+                                    onSave({ ...product, name, price, stock, icon, image });
                                 }}
                                 className="flex-1 bg-amber-400 text-slate-900 font-black py-2.5 rounded-xl text-xs shadow-md"
                             >
@@ -1096,14 +1188,14 @@
             return (
                 <button 
                     onClick={onClick}
-                    className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all relative ${
-                        active ? 'text-amber-500 font-black scale-105' : 'text-slate-400 font-bold'
+                    className={`flex flex-col items-center justify-center py-2 px-3 rounded-2xl transition-all relative min-w-[68px] ${
+                        active ? 'text-amber-500 font-black scale-105 bg-amber-50' : 'text-slate-400 font-bold'
                     }`}
                 >
-                    <i className={`fa-solid ${icon} text-lg mb-0.5`}></i>
-                    <span className="text-[10px]">{label}</span>
+                    <i className={`fa-solid ${icon} text-xl mb-1`}></i>
+                    <span className="text-xs">{label}</span>
                     {badge > 0 && (
-                        <span className="absolute -top-1 right-2 bg-rose-500 text-white rounded-full w-4 h-4 text-[10px] flex items-center justify-center font-bold">
+                        <span className="absolute top-1 right-2 bg-rose-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center font-black shadow-md border-2 border-white">
                             {badge}
                         </span>
                     )}
