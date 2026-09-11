@@ -626,6 +626,7 @@
 
         // --- 3. Stats View Component ---
         function StatsView({ salesHistory, products, clearHistory }) {
+            const [showConfirm, setShowConfirm] = React.useState(false);
             const totalRevenue = salesHistory.reduce((s, t) => s + t.totalAmount, 0);
             const totalItemsSold = salesHistory.reduce((s, t) => s + t.items.reduce((is, i) => is + i.qty, 0), 0);
             
@@ -718,9 +719,17 @@
                         <div className="flex justify-between items-center">
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">最近交易紀錄</h3>
                             {salesHistory.length > 0 && (
-                                <button onClick={clearHistory} className="text-[10px] text-rose-500 hover:underline">
-                                    清空紀錄
-                                </button>
+                                !showConfirm ? (
+                                    <button onClick={() => setShowConfirm(true)} className="text-[10px] text-rose-500 font-bold hover:underline">
+                                        清空紀錄
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-rose-600 font-bold">確定清空？</span>
+                                        <button onClick={() => { clearHistory(); setShowConfirm(false); }} className="text-[10px] bg-rose-500 text-white px-2 py-0.5 rounded font-bold">是</button>
+                                        <button onClick={() => setShowConfirm(false)} className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-bold">否</button>
+                                    </div>
+                                )
                             )}
                         </div>
 
@@ -746,6 +755,8 @@
 
         // --- 4. Settings View Component ---
         function SettingsView({ paymentMethods, setPaymentMethods, resetDemoData }) {
+            const [showResetConfirm, setShowResetConfirm] = React.useState(false);
+
             const handleQRUpload = (id, event) => {
                 const file = event.target.files[0];
                 if (!file) return;
@@ -818,204 +829,36 @@
                     </div>
 
                     <div className="pt-4">
-                        <button 
-                            onClick={resetDemoData}
-                            className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors"
-                        >
-                            <i className="fa-solid fa-rotate-left mr-1"></i> 重置所有資料與範例商品
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        // --- 5. Checkout Modal Component ---
-        function CheckoutModal({ cart, cartTotal, paymentMethods, payMethod, setPayMethod, cashReceived, setCashReceived, onClose, onConfirm }) {
-            const numReceived = parseFloat(cashReceived) || 0;
-            const change = Math.max(0, numReceived - cartTotal);
-            const selectedEPay = paymentMethods.find(m => m.id === payMethod);
-
-            return (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 pop-in">
-                    <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                        
-                        {/* Modal Header */}
-                        <div className="bg-slate-900 text-white p-4 flex justify-between items-center">
-                            <div>
-                                <h3 className="font-bold text-base">請選擇支付方式與結帳</h3>
-                                <p className="text-xs text-slate-400">應付金額：<span className="text-amber-400 font-black text-lg">${cartTotal}</span></p>
-                            </div>
-                            <button onClick={onClose} className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center">
-                                ✕
-                            </button>
-                        </div>
-
-                        {/* Payment Method Selector Tabs */}
-                        <div className="p-4 space-y-4 overflow-y-auto flex-1">
-                            <div>
-                                <span className="text-xs font-bold text-slate-500 block mb-2">1. 選擇收款方式</span>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {/* Cash Option */}
-                                    <button 
-                                        onClick={() => { playSound('click'); setPayMethod('cash'); }}
-                                        className={`p-3 rounded-2xl border-2 font-bold text-xs flex items-center space-x-2 transition-all ${
-                                            payMethod === 'cash' 
-                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-200' 
-                                                : 'border-slate-200 text-slate-600 bg-white'
-                                        }`}
-                                    >
-                                        <i className="fa-solid fa-money-bill-wave text-base text-emerald-600"></i>
-                                        <span>💵 現金支付</span>
-                                    </button>
-
-                                    {/* Electronic Payment Options */}
-                                    {paymentMethods.map(m => (
-                                        <button 
-                                            key={m.id}
-                                            onClick={() => { playSound('click'); setPayMethod(m.id); }}
-                                            className={`p-3 rounded-2xl border-2 font-bold text-xs flex items-center space-x-2 transition-all ${
-                                                payMethod === m.id 
-                                                    ? 'border-sky-500 bg-sky-50 text-sky-800 ring-2 ring-sky-200' 
-                                                    : 'border-slate-200 text-slate-600 bg-white'
-                                            }`}
-                                        >
-                                            <i className={`fa-solid ${m.icon} text-base text-sky-600`}></i>
-                                            <span className="truncate">{m.name}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Payment Method Details View */}
-                            {payMethod === 'cash' ? (
-                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
-                                    <span className="text-xs font-bold text-slate-700 block">2. 輸入收取現金金額（算錢神器）</span>
-                                    
-                                    <div className="flex items-center space-x-2">
-                                        <span className="font-bold text-slate-500 text-sm">收到: $</span>
-                                        <input 
-                                            type="number" 
-                                            value={cashReceived}
-                                            onChange={(e) => setCashReceived(e.target.value)}
-                                            placeholder={cartTotal.toString()}
-                                            className="flex-1 text-2xl font-black p-2 border-2 border-slate-300 rounded-xl focus:border-emerald-500 outline-none text-slate-800 bg-white"
-                                        />
-                                    </div>
-
-                                    {/* Quick Amount Buttons */}
-                                    <div className="flex gap-2">
-                                        {[cartTotal, 50, 100, 500].filter(a => a >= cartTotal).map(amt => (
-                                            <button 
-                                                key={amt}
-                                                onClick={() => setCashReceived(amt.toString())}
-                                                className="flex-1 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 active:bg-slate-200"
-                                            >
-                                                ${amt}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {/* Calculated Change */}
-                                    <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
-                                        <span className="text-xs font-bold text-slate-600">應找錢金額：</span>
-                                        <span className={`text-2xl font-black ${numReceived >= cartTotal ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                            ${change}
-                                        </span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-3">
-                                    <span className="text-xs font-bold text-sky-800 bg-sky-100 px-3 py-1 rounded-full inline-block">
-                                        請請顧客掃描 QR Code 支付 <span className="font-black text-sm">${cartTotal}</span>
-                                    </span>
-
-                                    {/* QR Code Display */}
-                                    {selectedEPay?.qr ? (
-                                        <div className="bg-white p-3 rounded-2xl border shadow-inner inline-block">
-                                            <img 
-                                                src={selectedEPay.qr} 
-                                                alt={selectedEPay.name} 
-                                                className="w-48 h-48 object-contain mx-auto"
-                                            />
-                                        </div>
-                                    ) : (
-                                        <div className="w-48 h-48 bg-slate-200 rounded-2xl mx-auto flex flex-col items-center justify-center p-4 text-slate-400 border-2 border-dashed border-slate-300">
-                                            <i className="fa-solid fa-qrcode text-4xl mb-2"></i>
-                                            <span className="text-xs font-bold">尚未上傳 {selectedEPay?.name} 收款碼</span>
-                                            <span className="text-[10px] mt-1 text-slate-400">可在「系統設定」中上傳</span>
-                                        </div>
-                                    )}
-
-                                    <p className="text-[11px] text-slate-500 font-bold">
-                                        請確認手機或音箱提示已收到 <span className="text-amber-600 font-black">${cartTotal}</span> 元！
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Modal Action Button */}
-                        <div className="p-4 bg-slate-100 border-t border-slate-200">
+                        {!showResetConfirm ? (
                             <button 
-                                onClick={onConfirm}
-                                disabled={payMethod === 'cash' && numReceived > 0 && numReceived < cartTotal}
-                                className={`w-full py-3.5 rounded-2xl font-black text-lg shadow-xl bounce-active flex items-center justify-center gap-2 ${
-                                    payMethod === 'cash' && numReceived > 0 && numReceived < cartTotal
-                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700'
-                                }`}
+                                onClick={() => setShowResetConfirm(true)}
+                                className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors"
                             >
-                                <i className="fa-solid fa-circle-check text-xl"></i>
-                                <span>確認已收到款項 (完成交易)</span>
+                                <i className="fa-solid fa-rotate-left mr-1"></i> 重置所有資料與範例商品
                             </button>
-                        </div>
-
-                    </div>
-                </div>
-            );
-        }
-
-        // --- 6. Success Modal Component ---
-        function SuccessModal({ transaction, onClose }) {
-            return (
-                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md flex items-center justify-center p-4 z-50 pop-in">
-                    <div className="bg-white w-full max-w-xs rounded-3xl p-6 text-center shadow-2xl space-y-4 border-4 border-amber-300">
-                        <div className="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner animate-bounce">
-                            🎉
-                        </div>
-
-                        <div>
-                            <h3 className="text-xl font-black text-slate-800">交易成功！棒極了！</h3>
-                            <p className="text-xs text-slate-500 font-bold mt-1">謝謝小老闆的努力賣貨！</p>
-                        </div>
-
-                        <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-xs text-left space-y-1.5">
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">收款方式：</span>
-                                <span className="font-bold text-slate-800">{transaction.paymentName}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">銷售金額：</span>
-                                <span className="font-black text-amber-600 text-sm">${transaction.totalAmount}</span>
-                            </div>
-                            {transaction.paymentMethod === 'cash' && transaction.change > 0 && (
-                                <div className="flex justify-between text-emerald-600 font-bold pt-1 border-t border-slate-200">
-                                    <span>找錢給顧客：</span>
-                                    <span className="font-black text-sm">${transaction.change}</span>
+                        ) : (
+                            <div className="bg-rose-50 border border-rose-200 p-3 rounded-2xl text-center space-y-2">
+                                <p className="text-xs font-bold text-rose-700">確定重置為預設資料？所有變更與銷售紀錄將被清除。</p>
+                                <div className="flex gap-2 justify-center">
+                                    <button 
+                                        onClick={() => { resetDemoData(); setShowResetConfirm(false); }}
+                                        className="bg-rose-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs"
+                                    >
+                                        確認重置
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowResetConfirm(false)}
+                                        className="bg-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl text-xs"
+                                    >
+                                        取消
+                                    </button>
                                 </div>
-                            )}
-                        </div>
-
-                        <button 
-                            onClick={onClose}
-                            className="w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-black py-3 rounded-xl shadow-md bounce-active text-base"
-                        >
-                            繼續賣下一個！ 🚀
-                        </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
         }
-
         // --- 7. Edit Product Modal Component ---
         function EditProductModal({ product, onClose, onSave, onDelete }) {
             const [name, setName] = React.useState(product?.name || '');
@@ -1023,10 +866,100 @@
             const [stock, setStock] = React.useState(product?.stock || 10);
             const [icon, setIcon] = React.useState(product?.icon || '🎨');
             const [image, setImage] = React.useState(product?.image || '');
+            const [showCamera, setShowCamera] = React.useState(false);
+            const [cameraLoading, setCameraLoading] = React.useState(false);
+            const [cameraError, setCameraError] = React.useState(null);
+            const [formError, setFormError] = React.useState('');
+
+            const videoRef = React.useRef(null);
+            const streamRef = React.useRef(null);
 
             const EMOJI_OPTIONS = ['🎨', '🖼️', '🔑', '📿', '🏷️', '🧸', '🧶', '🪴', '🧦', '🧁', '🍪', '📖'];
 
-            // 處理手機拍攝/上傳圖片壓縮
+            // 開啟實時鏡頭 (包含 Timeout 處理與無縫退回機制)
+            React.useEffect(() => {
+                if (showCamera) {
+                    let isMounted = true;
+                    setCameraLoading(true);
+                    setCameraError(null);
+
+                    // 設置 3.5 秒 Timeout 防護機制，避免沙盒/瀏覽器權限鎖定導致 Timeout 報錯
+                    const timeoutId = setTimeout(() => {
+                        if (isMounted && cameraLoading) {
+                            setCameraLoading(false);
+                            setCameraError('鏡頭啟動逾時。沙盒預覽或瀏覽器隱私設定限制了即時鏡頭存取。請直接點選下方「手機相機/相簿」拍攝上傳！');
+                        }
+                    }, 3500);
+
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        navigator.mediaDevices.getUserMedia({ 
+                            video: { facingMode: { ideal: 'environment' } }, 
+                            audio: false 
+                        })
+                        .then(stream => {
+                            clearTimeout(timeoutId);
+                            if (!isMounted) {
+                                stream.getTracks().forEach(t => t.stop());
+                                return;
+                            }
+                            setCameraLoading(false);
+                            streamRef.current = stream;
+                            if (videoRef.current) {
+                                videoRef.current.srcObject = stream;
+                            }
+                        })
+                        .catch(err => {
+                            clearTimeout(timeoutId);
+                            console.warn("Camera access fallback triggered:", err);
+                            if (isMounted) {
+                                setCameraLoading(false);
+                                setCameraError('無法存取即時鏡頭。建議點擊右下方「手機相機/相簿」按鈕直接拍照。');
+                            }
+                        });
+                    } else {
+                        clearTimeout(timeoutId);
+                        setCameraLoading(false);
+                        setCameraError('當前環境不支援即時網頁鏡頭，請使用右下方「手機相機/相簿」選擇照片。');
+                    }
+
+                    return () => {
+                        isMounted = false;
+                        clearTimeout(timeoutId);
+                        if (streamRef.current) {
+                            streamRef.current.getTracks().forEach(track => track.stop());
+                            streamRef.current = null;
+                        }
+                    };
+                }
+            }, [showCamera]);
+
+            // 拍攝快門動作
+            const takeSnapShot = () => {
+                if (!videoRef.current) return;
+                playSound('add');
+                const video = videoRef.current;
+                const canvas = document.createElement('canvas');
+                const maxDim = 400;
+                let w = video.videoWidth || 640;
+                let h = video.videoHeight || 480;
+
+                if (w > h) {
+                    if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                } else {
+                    if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
+                }
+
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, w, h);
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                
+                setImage(compressedBase64);
+                setShowCamera(false);
+            };
+
+            // 處理手機選取相片/拍照壓縮
             const handlePhotoUpload = (e) => {
                 const file = e.target.files && e.target.files[0];
                 if (!file) return;
@@ -1036,7 +969,7 @@
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_SIZE = 300; // 壓縮縮圖，保持順暢
+                        const MAX_SIZE = 300;
                         let width = img.width;
                         let height = img.height;
 
@@ -1057,6 +990,8 @@
                         ctx.drawImage(img, 0, 0, width, height);
                         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
                         setImage(compressedBase64);
+                        playSound('add');
+                        setShowCamera(false);
                     };
                     img.src = event.target.result;
                 };
@@ -1070,114 +1005,198 @@
                             {product ? '修改商品資料' : '新增市集商品'}
                         </h3>
 
-                        <div className="space-y-3 text-xs">
-                            {/* 拍照 / 上傳圖片區域 */}
-                            <div>
-                                <label className="font-bold text-slate-600 block mb-1">商品相片 / 圖示</label>
-                                
-                                {image ? (
-                                    <div className="flex items-center space-x-3 bg-slate-50 p-2 rounded-2xl border border-slate-200">
-                                        <img src={image} alt="預覽" className="w-14 h-14 object-cover rounded-xl shadow-sm border border-white shrink-0" />
-                                        <div className="flex-1">
-                                            <p className="font-bold text-slate-700 text-xs">已使用自訂相片</p>
-                                            <p className="text-[10px] text-slate-400">已自動為您最佳化尺寸</p>
+                        {/* Live Camera Viewfinder Modal */}
+                        {showCamera ? (
+                            <div className="space-y-3 bg-slate-900 p-3 rounded-2xl text-center text-white">
+                                <div className="relative rounded-xl overflow-hidden bg-black aspect-square flex items-center justify-center">
+                                    {cameraLoading ? (
+                                        <div className="text-center p-4">
+                                            <i className="fa-solid fa-spinner fa-spin text-3xl text-amber-400 mb-2"></i>
+                                            <p className="text-xs font-bold text-slate-300">正在開啟鏡頭...</p>
                                         </div>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setImage('')}
-                                            className="text-xs text-rose-500 hover:text-rose-700 font-bold p-2 bg-rose-50 rounded-xl shrink-0"
-                                        >
-                                            移除
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <label className="flex items-center justify-center gap-2 w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 border-2 border-dashed border-amber-300 text-amber-800 rounded-xl font-bold cursor-pointer transition-colors active:scale-98">
-                                            <i className="fa-solid fa-camera text-base text-amber-600"></i>
-                                            <span>拍照 / 選擇商品相片</span>
-                                            <input 
-                                                type="file" 
-                                                accept="image/*" 
-                                                className="hidden" 
-                                                onChange={handlePhotoUpload}
-                                            />
-                                        </label>
+                                    ) : cameraError ? (
+                                        <div className="text-center p-3 text-rose-300 text-xs space-y-2">
+                                            <i className="fa-solid fa-triangle-exclamation text-2xl text-amber-400"></i>
+                                            <p className="font-bold leading-relaxed">{cameraError}</p>
+                                        </div>
+                                    ) : (
+                                        <video 
+                                            ref={videoRef} 
+                                            autoPlay 
+                                            playsInline 
+                                            muted 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    )}
+                                    <div className="absolute inset-0 border-2 border-white/30 rounded-xl pointer-events-none"></div>
+                                </div>
 
-                                        <div className="text-center text-[10px] text-slate-400 font-bold">或選擇預設圖示</div>
-                                        <div className="grid grid-cols-6 gap-1 bg-slate-50 p-2 rounded-xl">
-                                            {EMOJI_OPTIONS.map(e => (
-                                                <button 
-                                                    key={e} 
-                                                    type="button"
-                                                    onClick={() => { setIcon(e); setImage(''); }}
-                                                    className={`p-1.5 rounded-lg text-lg ${icon === e && !image ? 'bg-amber-300 shadow-sm' : 'hover:bg-slate-200'}`}
-                                                >
-                                                    {e}
-                                                </button>
-                                            ))}
-                                        </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowCamera(false)} 
+                                        className="flex-1 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300"
+                                    >
+                                        返回
+                                    </button>
+
+                                    {!cameraError && !cameraLoading && (
+                                        <button 
+                                            type="button" 
+                                            onClick={takeSnapShot} 
+                                            className="flex-1 py-2 rounded-xl bg-amber-400 text-xs font-black text-slate-900 shadow-lg flex items-center justify-center gap-1"
+                                        >
+                                            <i className="fa-solid fa-camera"></i> 快門拍照
+                                        </button>
+                                    )}
+
+                                    {/* Alternative direct file/camera trigger inside camera view */}
+                                    <label className="flex-1 py-2 rounded-xl bg-sky-500 text-xs font-black text-white shadow-lg flex items-center justify-center gap-1 cursor-pointer">
+                                        <i className="fa-solid fa-image"></i> 相機/相簿
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            capture="environment"
+                                            className="hidden" 
+                                            onChange={handlePhotoUpload}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-3 text-xs">
+                                {formError && (
+                                    <div className="bg-rose-100 border border-rose-300 text-rose-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                                        <i className="fa-solid fa-circle-exclamation"></i>
+                                        <span>{formError}</span>
                                     </div>
                                 )}
-                            </div>
 
-                            <div>
-                                <label className="font-bold text-slate-600 block mb-1">商品名稱</label>
-                                <input 
-                                    type="text" 
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="例如: 手作黏土公仔"
-                                    className="w-full p-2.5 border rounded-xl font-bold outline-none focus:border-amber-400"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="font-bold text-slate-600 block mb-1">單價 ($)</label>
+                                    <label className="font-bold text-slate-600 block mb-1">商品相片 / 圖示</label>
+                                    
+                                    {image ? (
+                                        <div className="flex items-center space-x-3 bg-slate-50 p-2 rounded-2xl border border-slate-200">
+                                            <img src={image} alt="預覽" className="w-14 h-14 object-cover rounded-xl shadow-sm border border-white shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="font-bold text-slate-700 text-xs">已選擇商品相片</p>
+                                                <p className="text-[10px] text-slate-400">已為您完成尺寸最佳化</p>
+                                            </div>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setImage('')}
+                                                className="text-xs text-rose-500 hover:text-rose-700 font-bold p-2 bg-rose-50 rounded-xl shrink-0"
+                                            >
+                                                移除
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {/* Dual buttons for camera capture and file picker */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setShowCamera(true)}
+                                                    className="flex flex-col items-center justify-center py-2.5 px-2 bg-amber-50 hover:bg-amber-100 border-2 border-amber-300 text-amber-900 rounded-2xl font-bold transition-all active:scale-95"
+                                                >
+                                                    <i className="fa-solid fa-camera text-lg text-amber-600 mb-0.5"></i>
+                                                    <span className="text-[11px]">即時鏡頭</span>
+                                                </button>
+
+                                                <label className="flex flex-col items-center justify-center py-2.5 px-2 bg-sky-50 hover:bg-sky-100 border-2 border-sky-300 text-sky-900 rounded-2xl font-bold cursor-pointer transition-all active:scale-95">
+                                                    <i className="fa-solid fa-image text-lg text-sky-600 mb-0.5"></i>
+                                                    <span className="text-[11px]">相機/相簿上傳</span>
+                                                    <input 
+                                                        type="file" 
+                                                        accept="image/*" 
+                                                        capture="environment"
+                                                        className="hidden" 
+                                                        onChange={handlePhotoUpload}
+                                                    />
+                                                </label>
+                                            </div>
+
+                                            <div className="text-center text-[10px] text-slate-400 font-bold pt-1">或選擇預設可愛圖示</div>
+                                            <div className="grid grid-cols-6 gap-1 bg-slate-50 p-2 rounded-xl">
+                                                {EMOJI_OPTIONS.map(e => (
+                                                    <button 
+                                                        key={e} 
+                                                        type="button"
+                                                        onClick={() => { setIcon(e); setImage(''); }}
+                                                        className={`p-1.5 rounded-lg text-lg ${icon === e && !image ? 'bg-amber-300 shadow-sm' : 'hover:bg-slate-200'}`}
+                                                    >
+                                                        {e}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="font-bold text-slate-600 block mb-1">商品名稱</label>
                                     <input 
-                                        type="number" 
-                                        value={price}
-                                        onChange={(e) => setPrice(Number(e.target.value))}
+                                        type="text" 
+                                        value={name}
+                                        onChange={(e) => { setName(e.target.value); setFormError(''); }}
+                                        placeholder="例如: 手作黏土公仔"
                                         className="w-full p-2.5 border rounded-xl font-bold outline-none focus:border-amber-400"
                                     />
                                 </div>
-                                <div>
-                                    <label className="font-bold text-slate-600 block mb-1">庫存數量</label>
-                                    <input 
-                                        type="number" 
-                                        value={stock}
-                                        onChange={(e) => setStock(Number(e.target.value))}
-                                        className="w-full p-2.5 border rounded-xl font-bold outline-none focus:border-amber-400"
-                                    />
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="font-bold text-slate-600 block mb-1">單價 ($)</label>
+                                        <input 
+                                            type="number" 
+                                            value={price}
+                                            onChange={(e) => setPrice(Number(e.target.value))}
+                                            className="w-full p-2.5 border rounded-xl font-bold outline-none focus:border-amber-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="font-bold text-slate-600 block mb-1">庫存數量</label>
+                                        <input 
+                                            type="number" 
+                                            value={stock}
+                                            onChange={(e) => setStock(Number(e.target.value))}
+                                            className="w-full p-2.5 border rounded-xl font-bold outline-none focus:border-amber-400"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="flex space-x-2 pt-2">
-                            {product && (
+                        {!showCamera && (
+                            <div className="flex space-x-2 pt-2">
+                                {product && (
+                                    <button 
+                                        onClick={() => onDelete(product.id)}
+                                        className="bg-rose-100 text-rose-600 font-bold px-3 py-2.5 rounded-xl text-xs"
+                                    >
+                                        刪除
+                                    </button>
+                                )}
                                 <button 
-                                    onClick={() => onDelete(product.id)}
-                                    className="bg-rose-100 text-rose-600 font-bold px-3 py-2.5 rounded-xl text-xs"
+                                    onClick={onClose}
+                                    className="flex-1 bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs"
                                 >
-                                    刪除
+                                    取消
                                 </button>
-                            )}
-                            <button 
-                                onClick={onClose}
-                                className="flex-1 bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs"
-                            >
-                                取消
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    if(!name) return alert('請輸入商品名稱');
-                                    onSave({ ...product, name, price, stock, icon, image });
-                                }}
-                                className="flex-1 bg-amber-400 text-slate-900 font-black py-2.5 rounded-xl text-xs shadow-md"
-                            >
-                                儲存
-                            </button>
-                        </div>
+                                <button 
+                                    onClick={() => {
+                                        if(!name.trim()) {
+                                            setFormError('請輸入商品名稱');
+                                            return;
+                                        }
+                                        onSave({ ...product, name: name.trim(), price, stock, icon, image });
+                                    }}
+                                    className="flex-1 bg-amber-400 text-slate-900 font-black py-2.5 rounded-xl text-xs shadow-md"
+                                >
+                                    儲存
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
