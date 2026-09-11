@@ -57,7 +57,7 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
-        /* 專門為熱敏紙小票設計的列印樣式 */
+        /* 熱敏紙小票列印樣式 */
         @media print {
             body * {
                 visibility: hidden;
@@ -330,16 +330,7 @@
                         <div className="flex items-center space-x-2.5">
                             <span className="text-3xl bg-white/20 p-2 rounded-2xl backdrop-blur-sm">🏬</span>
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <h1 className="font-black text-xl leading-tight tracking-wide truncate max-w-[170px] sm:max-w-[210px]">{shopName}</h1>
-                                    <button 
-                                        onClick={() => { playSound('click'); setEditShopNameModal(true); }}
-                                        className="bg-white/20 hover:bg-white/30 text-white rounded-lg p-1 text-xs active:scale-95 transition-all"
-                                        title="修改攤位名稱"
-                                    >
-                                        <i className="fa-solid fa-pen"></i>
-                                    </button>
-                                </div>
+                                <h1 className="font-black text-xl leading-tight tracking-wide truncate max-w-[170px] sm:max-w-[210px]">{shopName}</h1>
                                 <p className="text-xs text-amber-100 font-bold">簡單收銀 • 庫存管理 • 統計</p>
                             </div>
                         </div>
@@ -388,6 +379,8 @@
 
                         {activeTab === 'settings' && (
                             <SettingsView 
+                                shopName={shopName}
+                                openEditShopName={() => { playSound('click'); setEditShopNameModal(true); }}
                                 paymentMethods={paymentMethods}
                                 setPaymentMethods={setPaymentMethods}
                                 resetDemoData={() => {
@@ -502,7 +495,6 @@
 
             return (
                 <div className="p-3 space-y-4">
-                    {/* Products Grid */}
                     <div>
                         <div className="flex justify-between items-center mb-2 px-1">
                             <h2 className="text-sm font-black text-slate-700 flex items-center gap-1.5">
@@ -529,7 +521,6 @@
                                                 : 'bg-white border-slate-200 hover:border-amber-400 hover:shadow-md'
                                         }`}
                                     >
-                                        {/* Cart Qty Badge */}
                                         {cartQty > 0 && (
                                             <span className="absolute -top-2 -right-2 bg-rose-500 text-white font-black text-xs px-2 py-0.5 rounded-full shadow-md z-10 animate-bounce">
                                                 +{cartQty}
@@ -566,7 +557,6 @@
                         </div>
                     </div>
 
-                    {/* Cart Summary Bar & Checkout Launcher */}
                     {cartItemCount > 0 && (
                         <div className="fixed bottom-16 left-0 right-0 max-w-lg mx-auto p-3 z-20">
                             <div className="bg-slate-900 text-white rounded-3xl p-3 shadow-2xl flex justify-between items-center border border-slate-700">
@@ -602,7 +592,6 @@
                         </div>
                     )}
 
-                    {/* Cart Drawer */}
                     {showCartDrawer && cartItemCount > 0 && (
                         <div className="fixed inset-0 bg-slate-900/50 z-10 backdrop-blur-sm flex items-end justify-center p-3">
                             <div className="bg-white w-full max-w-lg rounded-3xl p-4 shadow-2xl space-y-3 mb-28 pop-in">
@@ -704,7 +693,6 @@
                                 </div>
 
                                 <div className="flex items-center space-x-3">
-                                    {/* Stock adjust buttons */}
                                     <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
                                         <button 
                                             onClick={() => handleStockAdjust(product.id, -1)}
@@ -725,7 +713,6 @@
                                         </button>
                                     </div>
 
-                                    {/* Edit Product button */}
                                     <button 
                                         onClick={() => { playSound('click'); openEditModal(product); }}
                                         className="text-slate-400 hover:text-slate-600 p-1 text-sm"
@@ -1065,13 +1052,11 @@
                             </button>
                         </div>
 
-                        {/* Amount summary */}
                         <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-4 rounded-2xl text-white text-center shadow-md">
                             <span className="text-xs font-bold text-amber-100 block">應收金額</span>
                             <span className="text-3xl font-black">${cartTotal}</span>
                         </div>
 
-                        {/* Payment Method Tabs */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-500 block">選擇付款方式：</label>
                             <div className="grid grid-cols-2 gap-2">
@@ -1104,7 +1089,6 @@
                             </div>
                         </div>
 
-                        {/* Cash mode UI */}
                         {payMethod === 'cash' ? (
                             <div className="space-y-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
                                 <div>
@@ -1121,7 +1105,6 @@
                                     </div>
                                 </div>
 
-                                {/* Quick bill shortcuts */}
                                 <div className="flex flex-wrap gap-1.5">
                                     <button 
                                         onClick={() => setCashReceived(cartTotal.toString())} 
@@ -1140,7 +1123,6 @@
                                     ))}
                                 </div>
 
-                                {/* Change Display */}
                                 <div className="bg-white p-3 rounded-xl border flex justify-between items-center">
                                     <span className="text-xs font-bold text-slate-600">應找金額：</span>
                                     <span className={`text-xl font-black ${change < 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
@@ -1149,7 +1131,6 @@
                                 </div>
                             </div>
                         ) : (
-                            /* E-payment QR mode UI */
                             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-3">
                                 <h4 className="font-bold text-xs text-slate-700 flex items-center justify-center gap-1">
                                     <i className="fa-solid fa-qrcode text-sky-500"></i>
@@ -1254,33 +1235,52 @@
                             setCameraLoading(false);
                             setCameraError('鏡頭啟動逾時。沙盒預覽或瀏覽器限制了即時鏡頭存取。請直接點選下方「相機/相簿」上傳！');
                         }
-                    }, 3500);
+                    }, 4000);
 
-                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                        navigator.mediaDevices.getUserMedia({ 
-                            video: { facingMode: { ideal: 'environment' } }, 
-                            audio: false 
-                        })
-                        .then(stream => {
+                    const startCamera = async () => {
+                        try {
+                            let stream = null;
+                            try {
+                                stream = await navigator.mediaDevices.getUserMedia({ 
+                                    video: { facingMode: { ideal: 'environment' } }, 
+                                    audio: false 
+                                });
+                            } catch (e1) {
+                                stream = await navigator.mediaDevices.getUserMedia({ 
+                                    video: true, 
+                                    audio: false 
+                                });
+                            }
+
                             clearTimeout(timeoutId);
                             if (!isMounted) {
-                                stream.getTracks().forEach(t => t.stop());
+                                if (stream) stream.getTracks().forEach(t => t.stop());
                                 return;
                             }
-                            setCameraLoading(false);
+
                             streamRef.current = stream;
+                            setCameraLoading(false);
+
                             if (videoRef.current) {
                                 videoRef.current.srcObject = stream;
+                                try {
+                                    await videoRef.current.play();
+                                } catch (playErr) {
+                                    console.log("Auto-play prevented or handled", playErr);
+                                }
                             }
-                        })
-                        .catch(err => {
+                        } catch (err) {
                             clearTimeout(timeoutId);
-                            console.warn("Camera access fallback triggered:", err);
+                            console.warn("Camera access failed:", err);
                             if (isMounted) {
                                 setCameraLoading(false);
                                 setCameraError('無法存取即時鏡頭。請直接點擊「相機/相簿」按鈕拍攝照片。');
                             }
-                        });
+                        }
+                    };
+
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        startCamera();
                     } else {
                         clearTimeout(timeoutId);
                         setCameraLoading(false);
@@ -1371,24 +1371,24 @@
                         {showCamera ? (
                             <div className="space-y-3 bg-slate-900 p-3 rounded-2xl text-center text-white">
                                 <div className="relative rounded-xl overflow-hidden bg-black aspect-square flex items-center justify-center">
-                                    {cameraLoading ? (
-                                        <div className="text-center p-4">
+                                    <video 
+                                        ref={videoRef} 
+                                        autoPlay 
+                                        playsInline 
+                                        muted 
+                                        className={`w-full h-full object-cover ${cameraLoading || cameraError ? 'hidden' : 'block'}`}
+                                    />
+                                    {cameraLoading && (
+                                        <div className="text-center p-4 absolute inset-0 flex flex-col items-center justify-center bg-black/80">
                                             <i className="fa-solid fa-spinner fa-spin text-3xl text-amber-400 mb-2"></i>
                                             <p className="text-xs font-bold text-slate-300">正在開啟鏡頭...</p>
                                         </div>
-                                    ) : cameraError ? (
-                                        <div className="text-center p-3 text-rose-300 text-xs space-y-2">
+                                    )}
+                                    {cameraError && !cameraLoading && (
+                                        <div className="text-center p-3 text-rose-300 text-xs space-y-2 absolute inset-0 flex flex-col items-center justify-center bg-black/90">
                                             <i className="fa-solid fa-triangle-exclamation text-2xl text-amber-400"></i>
                                             <p className="font-bold leading-relaxed">{cameraError}</p>
                                         </div>
-                                    ) : (
-                                        <video 
-                                            ref={videoRef} 
-                                            autoPlay 
-                                            playsInline 
-                                            muted 
-                                            className="w-full h-full object-cover"
-                                        />
                                     )}
                                     <div className="absolute inset-0 border-2 border-white/30 rounded-xl pointer-events-none"></div>
                                 </div>
@@ -1545,15 +1545,22 @@
                                 </button>
                                 <button 
                                     onClick={() => {
-                                        if(!name.trim()) {
+                                        if (!name.trim()) {
                                             setFormError('請輸入商品名稱');
                                             return;
                                         }
-                                        onSave({ ...product, name: name.trim(), price, stock, icon, image });
+                                        onSave({
+                                            ...product,
+                                            name: name.trim(),
+                                            price: Number(price) || 0,
+                                            stock: Number(stock) || 0,
+                                            icon: image ? '' : icon,
+                                            image: image
+                                        });
                                     }}
                                     className="flex-1 bg-amber-400 text-slate-900 font-black py-2.5 rounded-xl text-xs shadow-md"
                                 >
-                                    儲存
+                                    儲存商品
                                 </button>
                             </div>
                         )}
@@ -1562,7 +1569,7 @@
             );
         }
 
-        function SettingsView({ paymentMethods, setPaymentMethods, resetDemoData }) {
+        function SettingsView({ shopName, openEditShopName, paymentMethods, setPaymentMethods, resetDemoData }) {
             const [showResetConfirm, setShowResetConfirm] = React.useState(false);
 
             const handleQRUpload = (id, event) => {
@@ -1585,11 +1592,33 @@
             return (
                 <div className="p-4 space-y-4">
                     <div>
-                        <h2 className="text-base font-bold text-slate-800">電子支付與系統設定</h2>
-                        <p className="text-xs text-slate-500">上傳您的電子支付收款 QR Code 圖片</p>
+                        <h2 className="text-base font-bold text-slate-800">系統與支付設定</h2>
+                        <p className="text-xs text-slate-500">管理您的攤位名稱與電子支付收款 QR Code</p>
+                    </div>
+
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center space-x-2.5">
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-100 text-amber-600 text-base font-bold shrink-0">
+                                    🏬
+                                </div>
+                                <div className="overflow-hidden">
+                                    <span className="font-bold text-sm text-slate-800 block">店舖 / 攤位名稱</span>
+                                    <p className="text-xs text-amber-600 font-extrabold truncate max-w-[170px]">{shopName}</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={openEditShopName}
+                                className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold px-3 py-1.5 rounded-xl text-xs shadow-sm bounce-active shrink-0"
+                            >
+                                <i className="fa-solid fa-pen mr-1"></i>
+                                修改名稱
+                            </button>
+                        </div>
                     </div>
 
                     <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">電子支付收款圖碼</h3>
                         {paymentMethods.map(method => (
                             <div key={method.id} className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                                 <div className="flex justify-between items-center">
