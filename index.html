@@ -939,10 +939,6 @@
                 });
             });
 
-            const handlePrint = () => {
-                window.print();
-            };
-
             const downloadJPG = () => {
                 const element = document.getElementById('printable-receipt');
                 if (!element) return;
@@ -959,10 +955,6 @@
                 });
             };
 
-            const replayAnimation = () => {
-                setAnimKey(prev => prev + 1);
-            };
-
             return (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 z-50 pop-in overflow-y-auto">
                     <div className="bg-slate-900 w-full max-w-sm rounded-3xl p-4 border border-slate-800 shadow-2xl space-y-3 my-auto max-h-[96vh] flex flex-col text-white">
@@ -973,55 +965,46 @@
                                 <i className="fa-solid fa-receipt text-amber-400"></i>
                                 營業統計小票預覽
                             </h3>
-                            <div className="flex items-center gap-1.5">
-                                <button 
-                                    onClick={replayAnimation} 
-                                    disabled={isPrinting}
-                                    title="重新走紙"
-                                    className="text-[11px] bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold px-2.5 py-1 rounded-xl transition-all border border-slate-700 active:scale-95"
-                                >
-                                    <i className="fa-solid fa-play mr-1"></i>
-                                    走紙
-                                </button>
-                                <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
-                                    <i className="fa-solid fa-xmark text-lg"></i>
-                                </button>
-                            </div>
+                            <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
+                                <i className="fa-solid fa-xmark text-lg"></i>
+                            </button>
                         </div>
 
-                        {/* 印表機機身與切刀口 */}
-                        <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-2xl p-3 pb-0 shadow-xl border border-slate-700 relative">
-                            <div className="flex justify-between items-center pb-2 text-[10px] text-slate-400 font-mono font-bold">
-                                <span className="flex items-center gap-1.5">
-                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                    THERMAL POS-58
-                                </span>
-                                <span>
-                                    STATUS : {isPrinting ? (
-                                        <span className="text-amber-400 font-bold animate-pulse">Printing {printProgress}%</span>
-                                    ) : (
-                                        <span className="text-emerald-400 font-bold">READY</span>
-                                    )}
-                                </span>
-                            </div>
+                        {/* 印表機頂部機身 (微型切口機頭，不包裹整張小票) */}
+                        <div className="space-y-0">
+                            <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-t-2xl p-3 pb-2 shadow-lg border border-slate-700 relative z-20">
+                                <div className="flex justify-between items-center pb-2 text-[10px] text-slate-400 font-mono font-bold">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                        THERMAL POS-58
+                                    </span>
+                                    <span>
+                                        STATUS : {isPrinting ? (
+                                            <span className="text-amber-400 font-bold animate-pulse">Printing {printProgress}%</span>
+                                        ) : (
+                                            <span className="text-emerald-400 font-bold">READY</span>
+                                        )}
+                                    </span>
+                                </div>
 
-                            {/* 機身狹縫與鋸齒切刀 */}
-                            <div className="relative z-20">
-                                <div className="h-1 w-11/12 mx-auto cutter-blade-teeth rounded-t opacity-90"></div>
-                                <div className="bg-black h-3 w-full rounded-sm shadow-[inset_0_2px_6px_rgba(0,0,0,1)] border-t border-slate-800 flex justify-center items-center">
-                                    <div className="h-0.5 w-4/5 bg-slate-900 rounded-full"></div>
+                                {/* 機身狹縫與鋸齒切刀 */}
+                                <div className="relative z-30">
+                                    <div className="h-1 w-11/12 mx-auto cutter-blade-teeth rounded-t opacity-90"></div>
+                                    <div className="bg-black h-3 w-full rounded-sm shadow-[inset_0_2px_6px_rgba(0,0,0,1)] border-t border-slate-800 flex justify-center items-center">
+                                        <div className="h-0.5 w-4/5 bg-slate-900 rounded-full"></div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* 懸空吐紙展示區域 */}
-                            <div className="overflow-y-auto max-h-[50vh] pt-1 pb-6 px-1 flex justify-center relative z-10 overflow-hidden">
+                            {/* 懸空吐紙展示區域 (不在深色機身框內，小票自然垂直懸掛推出) */}
+                            <div className="overflow-y-auto max-h-[50vh] pt-1 pb-6 px-1 flex justify-center relative z-10 overflow-hidden bg-slate-950/60 rounded-b-2xl border-x border-b border-slate-800/80 shadow-inner">
                                 <div 
                                     key={animKey}
                                     className="animate-real-print-feed transition-all w-full"
                                     style={parseFloat(printSpeed) > 0 ? { animationDuration: `${printSpeed}s` } : { animation: 'none' }}
                                 >
                                     {/* 擬真熱敏紙張 */}
-                                    <div id="printable-receipt" className="paper-warm font-receipt p-4 text-slate-800 shadow-2xl text-xs space-y-3 relative rounded-t-sm">
+                                    <div id="printable-receipt" className="paper-warm font-receipt p-4 text-slate-800 shadow-[0_12px_28px_rgba(0,0,0,0.6)] text-xs space-y-3 relative rounded-t-sm mx-auto max-w-[280px]">
                                         <div className="text-center space-y-1 pb-2 border-b-2 border-slate-800">
                                             <h2 className="text-base font-black tracking-wider leading-snug">{shopName}</h2>
                                             <p className="text-[10px] font-bold text-slate-600">*** 擺攤營業成績總結單 ***</p>
@@ -1079,71 +1062,14 @@
                             </div>
                         </div>
 
-                        {/* 操作按鈕組 */}
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                            <button 
-                                onClick={handlePrint}
-                                className="bg-slate-800 hover:bg-slate-700 text-white font-extrabold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5 border border-slate-700 bounce-active"
-                            >
-                                <i className="fa-solid fa-print text-amber-400"></i>
-                                <span>列印/存為 PDF</span>
-                            </button>
-                            
+                        {/* 操作按鈕 */}
+                        <div className="pt-1">
                             <button 
                                 onClick={downloadJPG}
-                                className="bg-slate-800 hover:bg-slate-700 text-white font-extrabold py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5 border border-slate-700 bounce-active"
+                                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-extrabold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 border border-slate-700 bounce-active shadow-lg"
                             >
-                                <i className="fa-solid fa-image text-sky-400"></i>
+                                <i className="fa-solid fa-image text-sky-400 text-sm"></i>
                                 <span>下載 JPG 圖片</span>
-                            </button>
-                        </div>
-
-                        <button 
-                            onClick={onConfirmExport}
-                            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg bounce-active"
-                        >
-                            <i className="fa-solid fa-file-excel"></i>
-                            <span>確定並匯出 CSV 報表</span>
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        function EditShopNameModal({ shopName, onClose, onSave }) {
-            const [name, setName] = React.useState(shopName);
-
-            return (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in">
-                    <div className="bg-white w-full max-w-xs rounded-3xl p-5 shadow-2xl space-y-4">
-                        <h3 className="font-black text-base text-slate-800 flex items-center gap-2">
-                            <i className="fa-solid fa-store text-amber-500"></i>
-                            修改店舖 / 攤位名稱
-                        </h3>
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 block mb-1">請輸入您的市集攤位名稱：</label>
-                            <input 
-                                type="text" 
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="例如: 小晴的手作飾品店"
-                                className="w-full p-3 border rounded-2xl font-bold text-sm outline-none focus:border-amber-400"
-                            />
-                        </div>
-                        <div className="flex gap-2">
-                            <button 
-                                onClick={onClose}
-                                className="flex-1 bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs"
-                            >
-                                取消
-                            </button>
-                            <button 
-                                onClick={() => {
-                                    if(name.trim()) onSave(name.trim());
-                                }}
-                                className="flex-1 bg-amber-400 text-slate-900 font-black py-2.5 rounded-xl text-xs shadow-md"
-                            >
-                                儲存變更
                             </button>
                         </div>
                     </div>
@@ -1700,9 +1626,10 @@
 
         function SettingsView({ shopName, openEditShopName, paymentMethods, setPaymentMethods, printSpeed, setPrintSpeed, resetDemoData }) {
             const [showResetConfirm, setShowResetConfirm] = React.useState(false);
+            const [activePayTab, setActivePayTab] = React.useState(paymentMethods[0]?.id || 'pay_mpay');
 
             const handleQRUpload = (id, event) => {
-                const file = event.target.files[0];
+                const file = event.target.files && event.target.files[0];
                 if (!file) return;
 
                 const reader = new FileReader();
@@ -1717,128 +1644,172 @@
                 setPaymentMethods(paymentMethods.map(m => m.id === id ? { ...m, qr: '' } : m));
             };
 
+            const selectedPayMethod = paymentMethods.find(m => m.id === activePayTab) || paymentMethods[0];
+
             return (
                 <div className="p-4 space-y-4">
                     <div>
                         <h2 className="text-base font-bold text-slate-800">系統與支付設定</h2>
-                        <p className="text-xs text-slate-500">管理您的攤位名稱、列印速度與電子支付 QR Code</p>
+                        <p className="text-xs text-slate-500">分類管理您的攤位資訊、小票列印及電子支付收款碼</p>
                     </div>
 
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center space-x-2.5">
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-100 text-amber-600 text-base font-bold shrink-0">
-                                    🏬
-                                </div>
+                    {/* 分類一：攤位與出紙偏好 */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                            <i className="fa-solid fa-sliders text-amber-500 text-sm"></i>
+                            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">基本偏好設定</h3>
+                        </div>
+
+                        {/* 店鋪名稱 */}
+                        <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <div className="flex items-center space-x-2.5 overflow-hidden">
+                                <span className="text-xl shrink-0">🏬</span>
                                 <div className="overflow-hidden">
-                                    <span className="font-bold text-sm text-slate-800 block">店舖 / 攤位名稱</span>
-                                    <p className="text-xs text-amber-600 font-extrabold truncate max-w-[170px]">{shopName}</p>
+                                    <span className="text-[11px] font-bold text-slate-400 block">攤位名稱</span>
+                                    <p className="text-xs text-slate-800 font-extrabold truncate">{shopName}</p>
                                 </div>
                             </div>
                             <button 
                                 onClick={openEditShopName}
                                 className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold px-3 py-1.5 rounded-xl text-xs shadow-sm bounce-active shrink-0"
                             >
-                                <i className="fa-solid fa-pen mr-1"></i>
-                                修改名稱
+                                <i className="fa-solid fa-pen mr-1"></i>修改
                             </button>
+                        </div>
+
+                        {/* 列印速度 */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                    <i className="fa-solid fa-print text-amber-500"></i>
+                                    小票出紙列印速度
+                                </span>
+                                <span className="text-[11px] text-slate-400 font-bold">{printSpeed === '0' ? '關閉動畫' : `${printSpeed} 秒`}</span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-1.5">
+                                {[
+                                    { label: '極速 1.5s', val: '1.5' },
+                                    { label: '標準 4.5s', val: '4.5' },
+                                    { label: '慢速 7s', val: '7.0' },
+                                    { label: '關閉動畫', val: '0' }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.val}
+                                        onClick={() => setPrintSpeed(opt.val)}
+                                        className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                                            printSpeed === opt.val
+                                                ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm'
+                                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                        <div className="flex items-center space-x-2.5">
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-100 text-amber-600 text-base font-bold shrink-0">
-                                <i className="fa-solid fa-print"></i>
+                    {/* 分類二：電子支付 QR Code 管理 (採用頁籤選單，畫面更簡潔) */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                            <div className="flex items-center space-x-2">
+                                <i className="fa-solid fa-qrcode text-sky-500 text-sm"></i>
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">電子支付收款圖碼</h3>
                             </div>
-                            <div>
-                                <span className="font-bold text-sm text-slate-800 block">小票出紙列印速度</span>
-                                <p className="text-xs text-slate-400">設定營業結算小票吐紙動畫的時間長短</p>
-                            </div>
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
+                                已設定 {paymentMethods.filter(m => m.qr).length} / {paymentMethods.length}
+                            </span>
                         </div>
-                        <div className="grid grid-cols-4 gap-1.5 pt-1">
-                            {[
-                                { label: '極速 1.5s', val: '1.5' },
-                                { label: '標準 4.5s', val: '4.5' },
-                                { label: '慢速 7s', val: '7.0' },
-                                { label: '關閉動畫', val: '0' }
-                            ].map(opt => (
+
+                        {/* 支付方式切換頁籤 */}
+                        <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
+                            {paymentMethods.map(method => (
                                 <button
-                                    key={opt.val}
-                                    onClick={() => setPrintSpeed(opt.val)}
-                                    className={`py-2 rounded-xl text-xs font-bold transition-all border ${
-                                        printSpeed === opt.val
-                                            ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm'
-                                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                    key={method.id}
+                                    onClick={() => setActivePayTab(method.id)}
+                                    className={`py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative ${
+                                        activePayTab === method.id
+                                            ? 'bg-white text-slate-900 shadow-sm'
+                                            : 'text-slate-500 hover:text-slate-800'
                                     }`}
                                 >
-                                    {opt.label}
+                                    <i className={`fa-solid ${method.icon} text-xs ${method.qr ? 'text-emerald-500' : 'text-slate-400'}`}></i>
+                                    <span className="truncate w-full text-center">{method.name.split(' ')[0]}</span>
+                                    {method.qr && (
+                                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                    )}
                                 </button>
                             ))}
                         </div>
-                    </div>
 
-                    <div className="space-y-3">
-                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">電子支付收款圖碼</h3>
-                        {paymentMethods.map(method => (
-                            <div key={method.id} className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        {/* 當前選中的支付方式 QR 設定面板 */}
+                        {selectedPayMethod && (
+                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-3">
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center space-x-2">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${method.color}`}>
-                                            <i className={`fa-solid ${method.icon}`}></i>
+                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs ${selectedPayMethod.color}`}>
+                                            <i className={`fa-solid ${selectedPayMethod.icon}`}></i>
                                         </div>
-                                        <span className="font-bold text-sm text-slate-800">{method.name}</span>
+                                        <span className="font-extrabold text-xs text-slate-800">{selectedPayMethod.name}</span>
                                     </div>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${method.qr ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
-                                        {method.qr ? '已設定收款碼' : '未上傳'}
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${selectedPayMethod.qr ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        {selectedPayMethod.qr ? '已設定收款碼' : '未設定'}
                                     </span>
                                 </div>
 
-                                {method.qr ? (
-                                    <div className="flex items-center space-x-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                                        <img src={method.qr} alt={method.name} className="w-16 h-16 object-contain rounded-lg border bg-white" />
-                                        <div className="flex-1">
-                                            <p className="text-xs text-slate-600 font-bold">已上傳收款 Code</p>
-                                            <p className="text-[10px] text-slate-400">結帳選此支付時將展示這張圖</p>
+                                {selectedPayMethod.qr ? (
+                                    <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-slate-200">
+                                        <img src={selectedPayMethod.qr} alt={selectedPayMethod.name} className="w-20 h-20 object-contain rounded-lg border shrink-0" />
+                                        <div className="flex-1 space-y-1">
+                                            <p className="text-xs text-slate-800 font-bold">收款 QR Code 運作中</p>
+                                            <p className="text-[10px] text-slate-400">結帳時顧客選擇 {selectedPayMethod.name} 將自動展示此圖</p>
+                                            <button 
+                                                onClick={() => removeQR(selectedPayMethod.id)}
+                                                className="text-xs text-rose-500 hover:text-rose-700 font-bold underline text-[11px] pt-1 block"
+                                            >
+                                                刪除並重新上傳
+                                            </button>
                                         </div>
-                                        <button 
-                                            onClick={() => removeQR(method.id)}
-                                            className="text-xs text-rose-500 hover:text-rose-700 p-2 font-bold"
-                                        >
-                                            移除
-                                        </button>
                                     </div>
                                 ) : (
-                                    <label className="block w-full border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl p-3 text-center cursor-pointer transition-colors bg-slate-50">
-                                        <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-lg mb-1 block"></i>
-                                        <span className="text-xs font-bold text-slate-600 block">上傳 {method.name} 收款圖片</span>
-                                        <span className="text-[10px] text-slate-400 block">點擊選擇照片/拍攝相簿</span>
+                                    <label className="block w-full border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl p-4 text-center cursor-pointer transition-colors bg-white">
+                                        <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-xl mb-1 block"></i>
+                                        <span className="text-xs font-bold text-slate-700 block">上傳 {selectedPayMethod.name} 收款碼照片</span>
+                                        <span className="text-[10px] text-slate-400 block mt-0.5">支援手機拍照或從相簿選擇圖片</span>
                                         <input 
                                             type="file" 
                                             accept="image/*" 
                                             className="hidden" 
-                                            onChange={(e) => handleQRUpload(method.id, e)}
+                                            onChange={(e) => handleQRUpload(selectedPayMethod.id, e)}
                                         />
                                     </label>
                                 )}
                             </div>
-                        ))}
+                        )}
                     </div>
 
-                    <div className="pt-4">
+                    {/* 分類三：系統維護與重置 */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                            <i className="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
+                            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">資料維護</h3>
+                        </div>
+
                         {!showResetConfirm ? (
                             <button 
                                 onClick={() => setShowResetConfirm(true)}
-                                className="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors"
+                                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors border border-slate-200 flex items-center justify-center gap-1.5"
                             >
-                                <i className="fa-solid fa-rotate-left mr-1"></i> 重置所有資料與範例商品
+                                <i className="fa-solid fa-rotate-left text-slate-500"></i>
+                                <span>重置所有資料與範例商品</span>
                             </button>
                         ) : (
                             <div className="bg-rose-50 border border-rose-200 p-3 rounded-2xl text-center space-y-2">
-                                <p className="text-xs font-bold text-rose-700">確定重置為預設資料？所有變更與銷售紀錄將被清除。</p>
+                                <p className="text-xs font-bold text-rose-700">確定重置為預設資料？所有商品與銷售紀錄將被清除。</p>
                                 <div className="flex gap-2 justify-center">
                                     <button 
                                         onClick={() => { resetDemoData(); setShowResetConfirm(false); }}
-                                        className="bg-rose-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs"
+                                        className="bg-rose-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs shadow-sm"
                                     >
                                         確認重置
                                     </button>
