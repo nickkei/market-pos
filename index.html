@@ -69,6 +69,10 @@
             background-size: 8px 8px;
             color: #1E293B;
         }
+        .paper-pure {
+            background-color: #FFFFFF;
+            color: #0F172A;
+        }
 
         /* 熱敏金屬切紙刀口齒痕視覺 */
         .cutter-blade-teeth {
@@ -101,33 +105,10 @@
             background-size: 12px 12px;
             background-repeat: repeat-x;
         }
-
-        /* 熱敏紙小票列印媒體 CSS */
-        @media print {
-            body * {
-                visibility: hidden !important;
-                background: transparent !important;
-            }
-            #printable-receipt, #printable-receipt * {
-                visibility: visible !important;
-            }
-            #printable-receipt {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                margin: 0 !important;
-                padding: 10px !important;
-                box-shadow: none !important;
-                background: white !important;
-                color: black !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .receipt-tear-edge {
-                display: none !important;
-            }
+        .receipt-tear-edge-pure {
+            background: linear-gradient(-135deg, #FFFFFF 6px, transparent 0), linear-gradient(135deg, #FFFFFF 6px, transparent 0);
+            background-size: 12px 12px;
+            background-repeat: repeat-x;
         }
     </style>
 </head>
@@ -135,11 +116,6 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const playSound = (type) => {
-            // 已依需求停用所有音效，保持靜音操作
-            return;
-        };
-
         const DEFAULT_PRODUCTS = [
             { id: 'p1', name: '手作黏土公仔', price: 30, stock: 10, icon: '🎨', color: 'bg-rose-100 text-rose-600' },
             { id: 'p2', name: '手繪插畫明信片', price: 15, stock: 25, icon: '🖼️', color: 'bg-amber-100 text-amber-600' },
@@ -155,6 +131,16 @@
             { id: 'pay_ali', name: '支付寶', icon: 'fa-alipay', color: 'bg-blue-500 text-white', qr: '' }
         ];
 
+        const DEFAULT_PRINTER_SETTINGS = {
+            stallNo: '攤位 A-08',
+            slogan: '純手工打造，帶走一份小幸運',
+            socialAccount: '@kids_market',
+            thanksMsg: '感謝支持小老闆的手作夢想！🎉',
+            paperTheme: 'warm', // 'warm' or 'pure'
+            showSignature: true,
+            showSocialQr: true,
+        };
+
         function App() {
             const [shopName, setShopName] = React.useState(() => {
                 return localStorage.getItem('market_shop_name') || '小老闆文創市集助手';
@@ -168,6 +154,11 @@
             const [paymentMethods, setPaymentMethods] = React.useState(() => {
                 const saved = localStorage.getItem('market_payments');
                 return saved ? JSON.parse(saved) : DEFAULT_PAYMENTS;
+            });
+
+            const [printerSettings, setPrinterSettings] = React.useState(() => {
+                const saved = localStorage.getItem('market_printer_settings');
+                return saved ? JSON.parse(saved) : DEFAULT_PRINTER_SETTINGS;
             });
 
             const [salesHistory, setSalesHistory] = React.useState(() => {
@@ -187,9 +178,8 @@
             const [editProductModal, setEditProductModal] = React.useState(null);
             const [showSuccessModal, setShowSuccessModal] = React.useState(false);
             const [lastTransaction, setLastTransaction] = React.useState(null);
-            
-            const [editShopNameModal, setEditShopNameModal] = React.useState(false);
             const [receiptModal, setReceiptModal] = React.useState(false);
+            const [selectedTxForReceipt, setSelectedTxForReceipt] = React.useState(null);
 
             React.useEffect(() => {
                 localStorage.setItem('market_shop_name', shopName);
@@ -202,6 +192,10 @@
             React.useEffect(() => {
                 localStorage.setItem('market_payments', JSON.stringify(paymentMethods));
             }, [paymentMethods]);
+
+            React.useEffect(() => {
+                localStorage.setItem('market_printer_settings', JSON.stringify(printerSettings));
+            }, [printerSettings]);
 
             React.useEffect(() => {
                 localStorage.setItem('market_sales', JSON.stringify(salesHistory));
@@ -375,7 +369,10 @@
                             <StatsView 
                                 salesHistory={salesHistory}
                                 products={products}
-                                openReceiptModal={() => setReceiptModal(true)}
+                                openReceiptModal={(tx = null) => {
+                                    setSelectedTxForReceipt(tx);
+                                    setReceiptModal(true);
+                                }}
                                 exportCSV={exportSalesCSV}
                                 clearHistory={() => setSalesHistory([])}
                             />
@@ -384,14 +381,17 @@
                         {activeTab === 'settings' && (
                             <SettingsView 
                                 shopName={shopName}
-                                openEditShopName={() => setEditShopNameModal(true)}
+                                setShopName={setShopName}
                                 paymentMethods={paymentMethods}
                                 setPaymentMethods={setPaymentMethods}
+                                printerSettings={printerSettings}
+                                setPrinterSettings={setPrinterSettings}
                                 printSpeed={printSpeed}
                                 setPrintSpeed={setPrintSpeed}
                                 resetDemoData={() => {
                                     setProducts(DEFAULT_PRODUCTS);
                                     setPaymentMethods(DEFAULT_PAYMENTS);
+                                    setPrinterSettings(DEFAULT_PRINTER_SETTINGS);
                                     setSalesHistory([]);
                                     setShopName('小老闆文創市集助手');
                                     setPrintSpeed('4.5');
@@ -431,26 +431,16 @@
                     </nav>
 
                     {/* Modals */}
-                    {editShopNameModal && (
-                        <EditShopNameModal 
-                            shopName={shopName}
-                            onClose={() => setEditShopNameModal(false)}
-                            onSave={(newName) => {
-                                setShopName(newName);
-                                setEditShopNameModal(false);
-                            }}
-                        />
-                    )}
-
                     {receiptModal && (
                         <ReceiptModal 
                             shopName={shopName}
                             salesHistory={salesHistory}
+                            transaction={selectedTxForReceipt}
+                            printerSettings={printerSettings}
                             printSpeed={printSpeed}
-                            onClose={() => setReceiptModal(false)}
-                            onConfirmExport={() => {
-                                exportSalesCSV();
+                            onClose={() => {
                                 setReceiptModal(false);
+                                setSelectedTxForReceipt(null);
                             }}
                         />
                     )}
@@ -473,6 +463,10 @@
                         <SuccessModal 
                             transaction={lastTransaction}
                             onClose={() => setShowSuccessModal(false)}
+                            onOpenReceipt={(tx) => {
+                                setSelectedTxForReceipt(tx);
+                                setReceiptModal(true);
+                            }}
                         />
                     )}
 
@@ -761,11 +755,11 @@
                         </div>
 
                         <button 
-                            onClick={openReceiptModal}
+                            onClick={() => openReceiptModal(null)}
                             className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-3.5 py-2 rounded-2xl text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
                         >
                             <i className="fa-solid fa-receipt text-sm"></i>
-                            <span>營業結算小票</span>
+                            <span>營業總結小票</span>
                         </button>
                     </div>
 
@@ -879,7 +873,17 @@
                                             {new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {tx.paymentName}
                                         </div>
                                     </div>
-                                    <span className="font-black text-amber-600 text-sm">${tx.totalAmount}</span>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="font-black text-amber-600 text-sm">${tx.totalAmount}</span>
+                                        <button 
+                                            onClick={() => openReceiptModal(tx)}
+                                            title="列印/查看此單小票"
+                                            className="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2 py-1 rounded-lg text-[10px] flex items-center gap-1 active:scale-95 transition-all shrink-0"
+                                        >
+                                            <i className="fa-solid fa-receipt text-amber-600"></i>
+                                            <span>小票</span>
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -888,9 +892,14 @@
             );
         }
 
-        function ReceiptModal({ shopName, salesHistory, printSpeed, onClose, onConfirmExport }) {
-            const totalRevenue = salesHistory.reduce((s, t) => s + t.totalAmount, 0);
-            const totalItemsSold = salesHistory.reduce((s, t) => s + t.items.reduce((is, i) => is + i.qty, 0), 0);
+        function ReceiptModal({ shopName, salesHistory, transaction, printerSettings, printSpeed, onClose }) {
+            const isSingle = Boolean(transaction);
+
+            const totalRevenue = isSingle ? transaction.totalAmount : salesHistory.reduce((s, t) => s + t.totalAmount, 0);
+            const totalItemsSold = isSingle 
+                ? transaction.items.reduce((s, i) => s + i.qty, 0)
+                : salesHistory.reduce((s, t) => s + t.items.reduce((is, i) => is + i.qty, 0), 0);
+            
             const cashRevenue = salesHistory.filter(t => t.paymentMethod === 'cash').reduce((s, t) => s + t.totalAmount, 0);
             const epayRevenue = totalRevenue - cashRevenue;
 
@@ -898,7 +907,6 @@
             const [isPrinting, setIsPrinting] = React.useState(false);
             const [printProgress, setPrintProgress] = React.useState(100);
 
-            // 當 animKey 或 printSpeed 變更時，觸發出紙動畫與百分比算量
             React.useEffect(() => {
                 const duration = parseFloat(printSpeed);
                 if (duration <= 0) {
@@ -929,15 +937,21 @@
             }, [animKey, printSpeed]);
 
             const itemSummary = {};
-            salesHistory.forEach(t => {
-                t.items.forEach(item => {
-                    if (!itemSummary[item.name]) {
-                        itemSummary[item.name] = { qty: 0, subtotal: 0, price: item.price };
-                    }
-                    itemSummary[item.name].qty += item.qty;
-                    itemSummary[item.name].subtotal += (item.price * item.qty);
+            if (isSingle) {
+                transaction.items.forEach(item => {
+                    itemSummary[item.name] = { qty: item.qty, subtotal: item.price * item.qty, price: item.price };
                 });
-            });
+            } else {
+                salesHistory.forEach(t => {
+                    t.items.forEach(item => {
+                        if (!itemSummary[item.name]) {
+                            itemSummary[item.name] = { qty: 0, subtotal: 0, price: item.price };
+                        }
+                        itemSummary[item.name].qty += item.qty;
+                        itemSummary[item.name].subtotal += (item.price * item.qty);
+                    });
+                });
+            }
 
             const downloadJPG = () => {
                 const element = document.getElementById('printable-receipt');
@@ -946,10 +960,11 @@
                 html2canvas(element, {
                     scale: 3,
                     useCORS: true,
-                    backgroundColor: '#FFFDF7'
+                    backgroundColor: printerSettings.paperTheme === 'pure' ? '#FFFFFF' : '#FFFDF7'
                 }).then(canvas => {
                     const link = document.createElement('a');
-                    link.download = `${shopName}_營業結算小票_${new Date().toISOString().slice(0, 10)}.jpg`;
+                    const filePrefix = isSingle ? `單筆交易明細_${transaction.id.slice(-6)}` : '營業統計小票';
+                    link.download = `${shopName}_${filePrefix}_${new Date().toISOString().slice(0, 10)}.jpg`;
                     link.href = canvas.toDataURL('image/jpeg', 0.92);
                     link.click();
                 });
@@ -963,14 +978,14 @@
                         <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                             <h3 className="font-black text-sm text-slate-100 flex items-center gap-2">
                                 <i className="fa-solid fa-receipt text-amber-400"></i>
-                                營業統計小票預覽
+                                {isSingle ? '顧客交易小票預覽' : '營業統計小票預覽'}
                             </h3>
                             <button onClick={onClose} className="text-slate-400 hover:text-white p-1">
                                 <i className="fa-solid fa-xmark text-lg"></i>
                             </button>
                         </div>
 
-                        {/* 印表機頂部機身 (微型切口機頭，不包裹整張小票) */}
+                        {/* 微型切口印表機頂部機身 */}
                         <div className="space-y-0">
                             <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-t-2xl p-3 pb-2 shadow-lg border border-slate-700 relative z-20">
                                 <div className="flex justify-between items-center pb-2 text-[10px] text-slate-400 font-mono font-bold">
@@ -996,39 +1011,65 @@
                                 </div>
                             </div>
 
-                            {/* 懸空吐紙展示區域 (不在深色機身框內，小票自然垂直懸掛推出) */}
+                            {/* 懸空吐紙展示區域 */}
                             <div className="overflow-y-auto max-h-[50vh] pt-1 pb-6 px-1 flex justify-center relative z-10 overflow-hidden bg-slate-950/60 rounded-b-2xl border-x border-b border-slate-800/80 shadow-inner">
                                 <div 
                                     key={animKey}
                                     className="animate-real-print-feed transition-all w-full"
                                     style={parseFloat(printSpeed) > 0 ? { animationDuration: `${printSpeed}s` } : { animation: 'none' }}
                                 >
-                                    {/* 擬真熱敏紙張 */}
-                                    <div id="printable-receipt" className="paper-warm font-receipt p-4 text-slate-800 shadow-[0_12px_28px_rgba(0,0,0,0.6)] text-xs space-y-3 relative rounded-t-sm mx-auto max-w-[280px]">
+                                    {/* 熱敏紙張 */}
+                                    <div id="printable-receipt" className={`font-receipt p-4 text-slate-800 shadow-[0_12px_28px_rgba(0,0,0,0.6)] text-xs space-y-3 relative rounded-t-sm mx-auto max-w-[280px] ${printerSettings.paperTheme === 'pure' ? 'paper-pure' : 'paper-warm'}`}>
                                         <div className="text-center space-y-1 pb-2 border-b-2 border-slate-800">
                                             <h2 className="text-base font-black tracking-wider leading-snug">{shopName}</h2>
-                                            <p className="text-[10px] font-bold text-slate-600">*** 擺攤營業成績總結單 ***</p>
-                                            <p className="text-[10px] text-slate-500 font-sans">{new Date().toLocaleString()}</p>
+                                            {printerSettings.stallNo && (
+                                                <p className="text-[10px] font-bold bg-slate-200 text-slate-800 rounded px-2 py-0.5 inline-block">[ {printerSettings.stallNo} ]</p>
+                                            )}
+                                            {printerSettings.slogan && (
+                                                <p className="text-[10px] italic text-slate-600 font-sans">"{printerSettings.slogan}"</p>
+                                            )}
+                                            <p className="text-[10px] text-slate-500 font-sans mt-1">
+                                                {isSingle ? new Date(transaction.timestamp).toLocaleString() : new Date().toLocaleString()}
+                                            </p>
                                         </div>
 
-                                        <div className="space-y-1 py-1 border-b border-dashed border-slate-400 font-mono">
-                                            <div className="flex justify-between font-bold">
-                                                <span>今日總營業額：</span>
-                                                <span className="text-sm font-black">${totalRevenue}</span>
+                                        {isSingle ? (
+                                            <div className="space-y-1 py-1 border-b border-dashed border-slate-400 font-mono">
+                                                <div className="flex justify-between text-[10px] text-slate-600">
+                                                    <span>單號：#{transaction.id.slice(-6)}</span>
+                                                    <span>支付：<strong>{transaction.paymentName}</strong></span>
+                                                </div>
+                                                <div className="flex justify-between font-bold pt-1">
+                                                    <span>本次消費金額：</span>
+                                                    <span className="text-sm font-black">${transaction.totalAmount}</span>
+                                                </div>
+                                                {transaction.paymentMethod === 'cash' && (
+                                                    <div className="flex justify-between text-[10px] text-slate-600">
+                                                        <span>顧客給付 / 找零：</span>
+                                                        <span>${transaction.cashReceived} / ${transaction.change}</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="flex justify-between text-slate-600 text-[11px]">
-                                                <span>總筆數 / 件數：</span>
-                                                <span>{salesHistory.length} 筆 / {totalItemsSold} 件</span>
+                                        ) : (
+                                            <div className="space-y-1 py-1 border-b border-dashed border-slate-400 font-mono">
+                                                <div className="flex justify-between font-bold">
+                                                    <span>今日總營業額：</span>
+                                                    <span className="text-sm font-black">${totalRevenue}</span>
+                                                </div>
+                                                <div className="flex justify-between text-slate-600 text-[11px]">
+                                                    <span>總筆數 / 件數：</span>
+                                                    <span>{salesHistory.length} 筆 / {totalItemsSold} 件</span>
+                                                </div>
+                                                <div className="flex justify-between text-slate-600 text-[11px]">
+                                                    <span>💵 現金收入：</span>
+                                                    <span>${cashRevenue}</span>
+                                                </div>
+                                                <div className="flex justify-between text-slate-600 text-[11px]">
+                                                    <span>📱 電子支付：</span>
+                                                    <span>${epayRevenue}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between text-slate-600 text-[11px]">
-                                                <span>💵 現金收入：</span>
-                                                <span>${cashRevenue}</span>
-                                            </div>
-                                            <div className="flex justify-between text-slate-600 text-[11px]">
-                                                <span>📱 電子支付：</span>
-                                                <span>${epayRevenue}</span>
-                                            </div>
-                                        </div>
+                                        )}
 
                                         <div className="space-y-1.5 py-1">
                                             <div className="font-black text-[11px] pb-1 border-b border-slate-300 flex justify-between">
@@ -1036,7 +1077,7 @@
                                                 <span>數量 x 單價 = 小計</span>
                                             </div>
                                             {Object.keys(itemSummary).length === 0 ? (
-                                                <p className="text-center py-2 text-slate-400">尚無銷售資料</p>
+                                                <p className="text-center py-2 text-slate-400">尚無商品項目</p>
                                             ) : (
                                                 Object.entries(itemSummary).map(([name, stat]) => (
                                                     <div key={name} className="flex justify-between text-[11px] font-mono">
@@ -1048,15 +1089,31 @@
                                         </div>
 
                                         <div className="pt-3 border-t-2 border-slate-800 text-center space-y-2">
-                                            <p className="text-[10px] font-bold">感謝擺攤辛勞！繼續加油！🎉</p>
-                                            <div className="pt-3 flex justify-between items-end text-[10px] text-slate-500 font-sans">
-                                                <span>小老闆簽名：___________</span>
-                                                <span>小助手核對：___________</span>
-                                            </div>
+                                            <p className="text-[10px] font-bold">{printerSettings.thanksMsg || '感謝支持小老闆的手作夢想！🎉'}</p>
+
+                                            {printerSettings.showSocialQr && printerSettings.socialAccount && (
+                                                <div className="pt-1 flex flex-col items-center justify-center">
+                                                    <div className="w-16 h-16 bg-slate-900 p-1 rounded flex items-center justify-center">
+                                                        <div className="w-full h-full border border-white flex flex-col justify-between p-0.5">
+                                                            <div className="flex justify-between"><div className="w-2.5 h-2.5 bg-white"></div><div className="w-2.5 h-2.5 bg-white"></div></div>
+                                                            <div className="text-[6px] text-white font-mono text-center">IG SCAN</div>
+                                                            <div className="flex justify-between"><div className="w-2.5 h-2.5 bg-white"></div><div className="w-1.5 h-1.5 bg-white"></div></div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-[9px] text-slate-600 font-mono mt-0.5">追蹤我們：{printerSettings.socialAccount}</span>
+                                                </div>
+                                            )}
+
+                                            {printerSettings.showSignature && (
+                                                <div className="pt-2 flex justify-between items-end text-[10px] text-slate-500 font-sans">
+                                                    <span>小老闆簽名：___________</span>
+                                                    <span>小助手核對：___________</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* 底部撕紙鋸齒效果 */}
-                                        <div className="absolute -bottom-2 left-0 right-0 h-2 receipt-tear-edge"></div>
+                                        <div className={`absolute -bottom-2 left-0 right-0 h-2 ${printerSettings.paperTheme === 'pure' ? 'receipt-tear-edge-pure' : 'receipt-tear-edge'}`}></div>
                                     </div>
                                 </div>
                             </div>
@@ -1070,6 +1127,62 @@
                             >
                                 <i className="fa-solid fa-image text-sky-400 text-sm"></i>
                                 <span>下載 JPG 圖片</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function SuccessModal({ transaction, onClose, onOpenReceipt }) {
+            return (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in">
+                    <div className="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center space-y-4">
+                        <div className="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner">
+                            🎉
+                        </div>
+
+                        <div>
+                            <h3 className="font-black text-lg text-slate-800">交易成功！</h3>
+                            <p className="text-xs text-slate-500 font-bold mt-1">太棒了！又成功賣出一單！</p>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-2xl border space-y-1 text-xs">
+                            <div className="flex justify-between text-slate-600">
+                                <span>付款方式：</span>
+                                <span className="font-bold text-slate-800">{transaction.paymentName}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-600">
+                                <span>交易總額：</span>
+                                <span className="font-extrabold text-amber-600">${transaction.totalAmount}</span>
+                            </div>
+                            {transaction.paymentMethod === 'cash' && (
+                                <div className="flex justify-between text-slate-600 pt-1 border-t">
+                                    <span>找零金額：</span>
+                                    <span className="font-extrabold text-emerald-600">${transaction.change}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            {onOpenReceipt && (
+                                <button 
+                                    onClick={() => {
+                                        onClose();
+                                        onOpenReceipt(transaction);
+                                    }}
+                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-black py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5 border border-slate-200 active:scale-95 transition-all"
+                                >
+                                    <i className="fa-solid fa-receipt text-amber-500"></i>
+                                    <span>列印 / 下載此單小票</span>
+                                </button>
+                            )}
+
+                            <button 
+                                onClick={onClose}
+                                className="w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-black py-3 rounded-2xl text-xs shadow-md bounce-active"
+                            >
+                                繼續下一筆收銀
                             </button>
                         </div>
                     </div>
@@ -1212,47 +1325,6 @@
             );
         }
 
-        function SuccessModal({ transaction, onClose }) {
-            return (
-                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in">
-                    <div className="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center space-y-4">
-                        <div className="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner">
-                            🎉
-                        </div>
-
-                        <div>
-                            <h3 className="font-black text-lg text-slate-800">交易成功！</h3>
-                            <p className="text-xs text-slate-500 font-bold mt-1">太棒了！又成功賣出一單！</p>
-                        </div>
-
-                        <div className="bg-slate-50 p-3 rounded-2xl border space-y-1 text-xs">
-                            <div className="flex justify-between text-slate-600">
-                                <span>付款方式：</span>
-                                <span className="font-bold text-slate-800">{transaction.paymentName}</span>
-                            </div>
-                            <div className="flex justify-between text-slate-600">
-                                <span>交易總額：</span>
-                                <span className="font-extrabold text-amber-600">${transaction.totalAmount}</span>
-                            </div>
-                            {transaction.paymentMethod === 'cash' && (
-                                <div className="flex justify-between text-slate-600 pt-1 border-t">
-                                    <span>找零金額：</span>
-                                    <span className="font-extrabold text-emerald-600">${transaction.change}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <button 
-                            onClick={onClose}
-                            className="w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-black py-3 rounded-2xl text-xs shadow-md bounce-active"
-                        >
-                            繼續下一筆收銀
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
         function EditProductModal({ product, onClose, onSave, onDelete }) {
             const [name, setName] = React.useState(product?.name || '');
             const [price, setPrice] = React.useState(product?.price || 10);
@@ -1278,7 +1350,7 @@
                     const timeoutId = setTimeout(() => {
                         if (isMounted && cameraLoading) {
                             setCameraLoading(false);
-                            setCameraError('鏡頭啟動逾時。沙盒預覽或瀏覽器限制了即時鏡頭存取。請直接點選下方「手機拍照」或「相簿選擇」！');
+                            setCameraError('鏡頭啟動逾時。沙盒預覽或瀏覽器限制了即時鏡頭存取，請點選「相簿選擇」！');
                         }
                     }, 4000);
 
@@ -1319,7 +1391,7 @@
                             console.warn("Camera access failed:", err);
                             if (isMounted) {
                                 setCameraLoading(false);
-                                setCameraError('無法存取即時鏡頭。請點擊「手機拍照」或「相簿選擇」上傳照片。');
+                                setCameraError('無法存取即時鏡頭。請點擊「相簿選擇」上傳照片。');
                             }
                         }
                     };
@@ -1329,7 +1401,7 @@
                     } else {
                         clearTimeout(timeoutId);
                         setCameraLoading(false);
-                        setCameraError('當前環境不支援即時鏡頭，請使用「手機拍照」或「相簿選擇」。');
+                        setCameraError('當前環境不支援即時鏡頭，請使用「相簿選擇」。');
                     }
 
                     return () => {
@@ -1612,7 +1684,7 @@
             );
         }
 
-        function SettingsView({ shopName, openEditShopName, paymentMethods, setPaymentMethods, printSpeed, setPrintSpeed, resetDemoData }) {
+        function SettingsView({ shopName, setShopName, paymentMethods, setPaymentMethods, printerSettings, setPrinterSettings, printSpeed, setPrintSpeed, resetDemoData }) {
             const [showResetConfirm, setShowResetConfirm] = React.useState(false);
             const [activePayTab, setActivePayTab] = React.useState(paymentMethods[0]?.id || 'pay_mpay');
 
@@ -1637,39 +1709,138 @@
             return (
                 <div className="p-4 space-y-4">
                     <div>
-                        <h2 className="text-base font-bold text-slate-800">系統與支付設定</h2>
-                        <p className="text-xs text-slate-500">分類管理您的攤位資訊、小票列印及電子支付收款碼</p>
+                        <h2 className="text-base font-bold text-slate-800">系統與小票列印設定</h2>
+                        <p className="text-xs text-slate-500">管理攤位名稱、小票樣式細節及電子支付收款碼</p>
                     </div>
 
-                    {/* 分類一：攤位與出紙偏好 */}
+                    {/* 分類一：攤位與基本偏好 */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                            <i className="fa-solid fa-store text-amber-500 text-sm"></i>
+                            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">攤位基本資料</h3>
+                        </div>
+
+                        <div>
+                            <label className="text-[11px] font-bold text-slate-500 block mb-1">攤位 / 店舖名稱：</label>
+                            <input 
+                                type="text" 
+                                value={shopName}
+                                onChange={(e) => setShopName(e.target.value)}
+                                placeholder="例如: 小晴的手作品牌"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-extrabold outline-none focus:border-amber-400"
+                            />
+                        </div>
+                    </div>
+
+                    {/* 分類二：小票打印機設定 (關鍵新模組) */}
                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
-                            <i className="fa-solid fa-sliders text-amber-500 text-sm"></i>
-                            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">基本偏好設定</h3>
+                            <i className="fa-solid fa-print text-amber-500 text-sm"></i>
+                            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">小票打印機設定</h3>
                         </div>
 
-                        {/* 店鋪名稱 */}
-                        <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <div className="flex items-center space-x-2.5 overflow-hidden">
-                                <span className="text-xl shrink-0">🏬</span>
-                                <div className="overflow-hidden">
-                                    <span className="text-[11px] font-bold text-slate-400 block">攤位名稱</span>
-                                    <p className="text-xs text-slate-800 font-extrabold truncate">{shopName}</p>
+                        {/* 1. 攤位位置與口號 */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                                <label className="font-bold text-slate-500 block mb-1">攤位編號 / 位置：</label>
+                                <input 
+                                    type="text" 
+                                    value={printerSettings.stallNo}
+                                    onChange={(e) => setPrinterSettings({ ...printerSettings, stallNo: e.target.value })}
+                                    placeholder="例如: 攤位 A-08"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
+                                />
+                            </div>
+                            <div>
+                                <label className="font-bold text-slate-500 block mb-1">IG / 社群帳號：</label>
+                                <input 
+                                    type="text" 
+                                    value={printerSettings.socialAccount}
+                                    onChange={(e) => setPrinterSettings({ ...printerSettings, socialAccount: e.target.value })}
+                                    placeholder="例如: @kids_craft"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 block mb-1">攤位標語 / 品牌口號：</label>
+                            <input 
+                                type="text" 
+                                value={printerSettings.slogan}
+                                onChange={(e) => setPrinterSettings({ ...printerSettings, slogan: e.target.value })}
+                                placeholder="例如: 純手工打造，帶走一份小幸運"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 block mb-1">頁尾感謝語 / 優惠標語：</label>
+                            <input 
+                                type="text" 
+                                value={printerSettings.thanksMsg}
+                                onChange={(e) => setPrinterSettings({ ...printerSettings, thanksMsg: e.target.value })}
+                                placeholder="例如: 感謝支持小老闆的手作夢想！"
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
+                            />
+                        </div>
+
+                        {/* 2. 熱敏紙質感與列印開關 */}
+                        <div className="space-y-2 pt-1 border-t border-slate-100">
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="font-bold text-slate-700">小票紙張質感：</span>
+                                <div className="flex gap-1">
+                                    <button 
+                                        onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'warm' })}
+                                        className={`px-3 py-1 rounded-xl font-bold text-[11px] border transition-all ${
+                                            printerSettings.paperTheme === 'warm' 
+                                                ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
+                                                : 'bg-slate-50 border-slate-200 text-slate-600'
+                                        }`}
+                                    >
+                                        復古米黃
+                                    </button>
+                                    <button 
+                                        onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'pure' })}
+                                        className={`px-3 py-1 rounded-xl font-bold text-[11px] border transition-all ${
+                                            printerSettings.paperTheme === 'pure' 
+                                                ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
+                                                : 'bg-slate-50 border-slate-200 text-slate-600'
+                                        }`}
+                                    >
+                                        純白熱敏
+                                    </button>
                                 </div>
                             </div>
-                            <button 
-                                onClick={openEditShopName}
-                                className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold px-3 py-1.5 rounded-xl text-xs shadow-sm bounce-active shrink-0"
-                            >
-                                <i className="fa-solid fa-pen mr-1"></i>修改
-                            </button>
+
+                            <div className="flex justify-between items-center pt-1 text-xs">
+                                <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={printerSettings.showSignature}
+                                        onChange={(e) => setPrinterSettings({ ...printerSettings, showSignature: e.target.checked })}
+                                        className="accent-amber-500 rounded w-4 h-4"
+                                    />
+                                    <span>顯示小老闆簽名欄</span>
+                                </label>
+
+                                <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={printerSettings.showSocialQr}
+                                        onChange={(e) => setPrinterSettings({ ...printerSettings, showSocialQr: e.target.checked })}
+                                        className="accent-amber-500 rounded w-4 h-4"
+                                    />
+                                    <span>顯示社群追蹤 QR</span>
+                                </label>
+                            </div>
                         </div>
 
-                        {/* 列印速度 */}
-                        <div className="space-y-2">
+                        {/* 3. 出紙動畫速度 */}
+                        <div className="space-y-2 pt-2 border-t border-slate-100">
                             <div className="flex justify-between items-center">
                                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                    <i className="fa-solid fa-print text-amber-500"></i>
+                                    <i className="fa-solid fa-gauge-high text-amber-500"></i>
                                     小票出紙列印速度
                                 </span>
                                 <span className="text-[11px] text-slate-400 font-bold">{printSpeed === '0' ? '關閉動畫' : `${printSpeed} 秒`}</span>
@@ -1684,7 +1855,7 @@
                                     <button
                                         key={opt.val}
                                         onClick={() => setPrintSpeed(opt.val)}
-                                        className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                                        className={`py-1.5 rounded-xl text-xs font-bold transition-all border ${
                                             printSpeed === opt.val
                                                 ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm'
                                                 : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -1697,7 +1868,7 @@
                         </div>
                     </div>
 
-                    {/* 分類二：電子支付 QR Code 管理 (採用頁籤選單，畫面更簡潔) */}
+                    {/* 分類三：電子支付 QR Code 管理 */}
                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                         <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                             <div className="flex items-center space-x-2">
@@ -1750,7 +1921,7 @@
                                         <img src={selectedPayMethod.qr} alt={selectedPayMethod.name} className="w-20 h-20 object-contain rounded-lg border shrink-0" />
                                         <div className="flex-1 space-y-1">
                                             <p className="text-xs text-slate-800 font-bold">收款 QR Code 運作中</p>
-                                            <p className="text-[10px] text-slate-400">結帳時顧客選擇 {selectedPayMethod.name} 將自動展示此圖</p>
+                                            <p className="text-[10px] text-slate-400">結帳時選擇 {selectedPayMethod.name} 將自動展示此圖</p>
                                             <button 
                                                 onClick={() => removeQR(selectedPayMethod.id)}
                                                 className="text-xs text-rose-500 hover:text-rose-700 font-bold underline text-[11px] pt-1 block"
@@ -1763,7 +1934,7 @@
                                     <label className="block w-full border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl p-4 text-center cursor-pointer transition-colors bg-white">
                                         <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-xl mb-1 block"></i>
                                         <span className="text-xs font-bold text-slate-700 block">上傳 {selectedPayMethod.name} 收款碼照片</span>
-                                        <span className="text-[10px] text-slate-400 block mt-0.5">支援手機拍照或從相簿選擇圖片</span>
+                                        <span className="text-[10px] text-slate-400 block mt-0.5">支援從手機相簿選擇圖片</span>
                                         <input 
                                             type="file" 
                                             accept="image/*" 
@@ -1776,7 +1947,7 @@
                         )}
                     </div>
 
-                    {/* 分類三：系統維護與重置 */}
+                    {/* 分類四：系統維護與重置 */}
                     <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                         <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
                             <i className="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
