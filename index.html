@@ -59,6 +59,15 @@
             100% { transform: scale(1); opacity: 1; }
         }
 
+        /* 隱藏滾動條但保留滾動功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
         /* 擬真熱敏紙質感與字體 */
         .font-receipt {
             font-family: 'Courier Prime', 'Courier New', monospace;
@@ -135,10 +144,12 @@
             stallNo: '攤位 A-08',
             slogan: '純手工打造，帶走一份小幸運',
             socialAccount: '@kids_market',
+            socialQrImage: '',
             thanksMsg: '感謝支持小老闆的手作夢想！🎉',
             paperTheme: 'warm', // 'warm' or 'pure'
             showSignature: true,
             showSocialQr: true,
+            paperWidth: '58mm', // '58mm' or '80mm'
         };
 
         function App() {
@@ -970,6 +981,8 @@
                 });
             };
 
+            const is80mm = printerSettings.paperWidth === '80mm';
+
             return (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 z-50 pop-in overflow-y-auto">
                     <div className="bg-slate-900 w-full max-w-sm rounded-3xl p-4 border border-slate-800 shadow-2xl space-y-3 my-auto max-h-[96vh] flex flex-col text-white">
@@ -991,7 +1004,7 @@
                                 <div className="flex justify-between items-center pb-2 text-[10px] text-slate-400 font-mono font-bold">
                                     <span className="flex items-center gap-1.5">
                                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                        THERMAL POS-58
+                                        POS-{is80mm ? '80' : '58'}
                                     </span>
                                     <span>
                                         STATUS : {isPrinting ? (
@@ -1012,14 +1025,21 @@
                             </div>
 
                             {/* 懸空吐紙展示區域 */}
-                            <div className="overflow-y-auto max-h-[50vh] pt-1 pb-6 px-1 flex justify-center relative z-10 overflow-hidden bg-slate-950/60 rounded-b-2xl border-x border-b border-slate-800/80 shadow-inner">
+                            <div className="overflow-y-auto no-scrollbar max-h-[50vh] pt-1 pb-6 px-1 flex justify-center relative z-10 bg-slate-950/60 rounded-b-2xl border-x border-b border-slate-800/80 shadow-inner">
                                 <div 
                                     key={animKey}
                                     className="animate-real-print-feed transition-all w-full"
                                     style={parseFloat(printSpeed) > 0 ? { animationDuration: `${printSpeed}s` } : { animation: 'none' }}
                                 >
                                     {/* 熱敏紙張 */}
-                                    <div id="printable-receipt" className={`font-receipt p-4 text-slate-800 shadow-[0_12px_28px_rgba(0,0,0,0.6)] text-xs space-y-3 relative rounded-t-sm mx-auto max-w-[280px] ${printerSettings.paperTheme === 'pure' ? 'paper-pure' : 'paper-warm'}`}>
+                                    <div 
+                                        id="printable-receipt" 
+                                        className={`font-receipt p-4 text-slate-800 shadow-[0_12px_28px_rgba(0,0,0,0.6)] space-y-3 relative rounded-t-sm mx-auto transition-all ${
+                                            is80mm ? 'max-w-[320px] text-sm' : 'max-w-[270px] text-xs'
+                                        } ${
+                                            printerSettings.paperTheme === 'pure' ? 'paper-pure' : 'paper-warm'
+                                        }`}
+                                    >
                                         <div className="text-center space-y-1 pb-2 border-b-2 border-slate-800">
                                             <h2 className="text-base font-black tracking-wider leading-snug">{shopName}</h2>
                                             {printerSettings.stallNo && (
@@ -1091,16 +1111,26 @@
                                         <div className="pt-3 border-t-2 border-slate-800 text-center space-y-2">
                                             <p className="text-[10px] font-bold">{printerSettings.thanksMsg || '感謝支持小老闆的手作夢想！🎉'}</p>
 
-                                            {printerSettings.showSocialQr && printerSettings.socialAccount && (
+                                            {printerSettings.showSocialQr && (
                                                 <div className="pt-1 flex flex-col items-center justify-center">
-                                                    <div className="w-16 h-16 bg-slate-900 p-1 rounded flex items-center justify-center">
-                                                        <div className="w-full h-full border border-white flex flex-col justify-between p-0.5">
-                                                            <div className="flex justify-between"><div className="w-2.5 h-2.5 bg-white"></div><div className="w-2.5 h-2.5 bg-white"></div></div>
-                                                            <div className="text-[6px] text-white font-mono text-center">IG SCAN</div>
-                                                            <div className="flex justify-between"><div className="w-2.5 h-2.5 bg-white"></div><div className="w-1.5 h-1.5 bg-white"></div></div>
+                                                    {printerSettings.socialQrImage ? (
+                                                        <img 
+                                                            src={printerSettings.socialQrImage} 
+                                                            alt="社群 QR Code" 
+                                                            className="w-20 h-20 object-contain p-1 border border-slate-300 rounded bg-white shadow-sm" 
+                                                        />
+                                                    ) : (
+                                                        <div className="w-16 h-16 bg-slate-900 p-1 rounded flex items-center justify-center">
+                                                            <div className="w-full h-full border border-white flex flex-col justify-between p-0.5">
+                                                                <div className="flex justify-between"><div className="w-2.5 h-2.5 bg-white"></div><div className="w-2.5 h-2.5 bg-white"></div></div>
+                                                                <div className="text-[6px] text-white font-mono text-center">IG SCAN</div>
+                                                                <div className="flex justify-between"><div className="w-2.5 h-2.5 bg-white"></div><div className="w-1.5 h-1.5 bg-white"></div></div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <span className="text-[9px] text-slate-600 font-mono mt-0.5">追蹤我們：{printerSettings.socialAccount}</span>
+                                                    )}
+                                                    {printerSettings.socialAccount && (
+                                                        <span className="text-[9px] text-slate-600 font-mono mt-1 font-bold">追蹤我們：{printerSettings.socialAccount}</span>
+                                                    )}
                                                 </div>
                                             )}
 
@@ -1687,6 +1717,7 @@
         function SettingsView({ shopName, setShopName, paymentMethods, setPaymentMethods, printerSettings, setPrinterSettings, printSpeed, setPrintSpeed, resetDemoData }) {
             const [showResetConfirm, setShowResetConfirm] = React.useState(false);
             const [activePayTab, setActivePayTab] = React.useState(paymentMethods[0]?.id || 'pay_mpay');
+            const [settingTab, setSettingTab] = React.useState('shop'); // 'shop', 'printer', 'payments', 'data'
 
             const handleQRUpload = (id, event) => {
                 const file = event.target.files && event.target.files[0];
@@ -1709,279 +1740,413 @@
             return (
                 <div className="p-4 space-y-4">
                     <div>
-                        <h2 className="text-base font-bold text-slate-800">系統與小票列印設定</h2>
-                        <p className="text-xs text-slate-500">管理攤位名稱、小票樣式細節及電子支付收款碼</p>
+                        <h2 className="text-base font-bold text-slate-800">系統設定</h2>
+                        <p className="text-xs text-slate-500">點擊分頁標籤切換管理項目</p>
                     </div>
 
-                    {/* 分類一：攤位與基本偏好 */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                        <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
-                            <i className="fa-solid fa-store text-amber-500 text-sm"></i>
-                            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">攤位基本資料</h3>
-                        </div>
+                    {/* 頂部四頁籤導覽 */}
+                    <div className="grid grid-cols-4 gap-1 bg-slate-200 p-1 rounded-2xl shadow-inner text-[11px] font-bold">
+                        <button
+                            onClick={() => setSettingTab('shop')}
+                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                                settingTab === 'shop'
+                                    ? 'bg-white text-slate-900 shadow-md font-black'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <i className="fa-solid fa-store text-amber-500"></i>
+                            <span className="truncate">攤位資料</span>
+                        </button>
 
-                        <div>
-                            <label className="text-[11px] font-bold text-slate-500 block mb-1">攤位 / 店舖名稱：</label>
-                            <input 
-                                type="text" 
-                                value={shopName}
-                                onChange={(e) => setShopName(e.target.value)}
-                                placeholder="例如: 小晴的手作品牌"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-extrabold outline-none focus:border-amber-400"
-                            />
-                        </div>
+                        <button
+                            onClick={() => setSettingTab('printer')}
+                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                                settingTab === 'printer'
+                                    ? 'bg-white text-slate-900 shadow-md font-black'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <i className="fa-solid fa-print text-amber-500"></i>
+                            <span className="truncate">小票打印</span>
+                        </button>
+
+                        <button
+                            onClick={() => setSettingTab('payments')}
+                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                                settingTab === 'payments'
+                                    ? 'bg-white text-slate-900 shadow-md font-black'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <i className="fa-solid fa-qrcode text-sky-500"></i>
+                            <span className="truncate">收款 QR</span>
+                        </button>
+
+                        <button
+                            onClick={() => setSettingTab('data')}
+                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                                settingTab === 'data'
+                                    ? 'bg-white text-slate-900 shadow-md font-black'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <i className="fa-solid fa-sliders text-rose-500"></i>
+                            <span className="truncate">資料維護</span>
+                        </button>
                     </div>
 
-                    {/* 分類二：小票打印機設定 (關鍵新模組) */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
-                            <i className="fa-solid fa-print text-amber-500 text-sm"></i>
-                            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">小票打印機設定</h3>
-                        </div>
+                    {/* 分頁 1：攤位基本資料 */}
+                    {settingTab === 'shop' && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 pop-in">
+                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                                <i className="fa-solid fa-store text-amber-500 text-sm"></i>
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">攤位基本資料</h3>
+                            </div>
 
-                        {/* 1. 攤位位置與口號 */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                                <label className="font-bold text-slate-500 block mb-1">攤位編號 / 位置：</label>
+                                <label className="text-[11px] font-bold text-slate-500 block mb-1">攤位 / 店舖名稱：</label>
                                 <input 
                                     type="text" 
-                                    value={printerSettings.stallNo}
-                                    onChange={(e) => setPrinterSettings({ ...printerSettings, stallNo: e.target.value })}
-                                    placeholder="例如: 攤位 A-08"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
+                                    value={shopName}
+                                    onChange={(e) => setShopName(e.target.value)}
+                                    placeholder="例如: 小晴的手作品牌"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-extrabold outline-none focus:border-amber-400"
                                 />
                             </div>
-                            <div>
-                                <label className="font-bold text-slate-500 block mb-1">IG / 社群帳號：</label>
-                                <input 
-                                    type="text" 
-                                    value={printerSettings.socialAccount}
-                                    onChange={(e) => setPrinterSettings({ ...printerSettings, socialAccount: e.target.value })}
-                                    placeholder="例如: @kids_craft"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
-                                />
-                            </div>
-                        </div>
 
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 block mb-1">攤位標語 / 品牌口號：</label>
-                            <input 
-                                type="text" 
-                                value={printerSettings.slogan}
-                                onChange={(e) => setPrinterSettings({ ...printerSettings, slogan: e.target.value })}
-                                placeholder="例如: 純手工打造，帶走一份小幸運"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="text-xs font-bold text-slate-500 block mb-1">頁尾感謝語 / 優惠標語：</label>
-                            <input 
-                                type="text" 
-                                value={printerSettings.thanksMsg}
-                                onChange={(e) => setPrinterSettings({ ...printerSettings, thanksMsg: e.target.value })}
-                                placeholder="例如: 感謝支持小老闆的手作夢想！"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
-                            />
-                        </div>
-
-                        {/* 2. 熱敏紙質感與列印開關 */}
-                        <div className="space-y-2 pt-1 border-t border-slate-100">
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="font-bold text-slate-700">小票紙張質感：</span>
-                                <div className="flex gap-1">
-                                    <button 
-                                        onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'warm' })}
-                                        className={`px-3 py-1 rounded-xl font-bold text-[11px] border transition-all ${
-                                            printerSettings.paperTheme === 'warm' 
-                                                ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
-                                                : 'bg-slate-50 border-slate-200 text-slate-600'
-                                        }`}
-                                    >
-                                        復古米黃
-                                    </button>
-                                    <button 
-                                        onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'pure' })}
-                                        className={`px-3 py-1 rounded-xl font-bold text-[11px] border transition-all ${
-                                            printerSettings.paperTheme === 'pure' 
-                                                ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
-                                                : 'bg-slate-50 border-slate-200 text-slate-600'
-                                        }`}
-                                    >
-                                        純白熱敏
-                                    </button>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                    <label className="font-bold text-slate-500 block mb-1">攤位編號 / 位置：</label>
+                                    <input 
+                                        type="text" 
+                                        value={printerSettings.stallNo}
+                                        onChange={(e) => setPrinterSettings({ ...printerSettings, stallNo: e.target.value })}
+                                        placeholder="例如: 攤位 A-08"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="font-bold text-slate-500 block mb-1">IG / 社群帳號：</label>
+                                    <input 
+                                        type="text" 
+                                        value={printerSettings.socialAccount}
+                                        onChange={(e) => setPrinterSettings({ ...printerSettings, socialAccount: e.target.value })}
+                                        placeholder="例如: @kids_craft"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
+                                    />
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center pt-1 text-xs">
-                                <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={printerSettings.showSignature}
-                                        onChange={(e) => setPrinterSettings({ ...printerSettings, showSignature: e.target.checked })}
-                                        className="accent-amber-500 rounded w-4 h-4"
-                                    />
-                                    <span>顯示小老闆簽名欄</span>
-                                </label>
-
-                                <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={printerSettings.showSocialQr}
-                                        onChange={(e) => setPrinterSettings({ ...printerSettings, showSocialQr: e.target.checked })}
-                                        className="accent-amber-500 rounded w-4 h-4"
-                                    />
-                                    <span>顯示社群追蹤 QR</span>
-                                </label>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-1">攤位標語 / 品牌口號：</label>
+                                <input 
+                                    type="text" 
+                                    value={printerSettings.slogan}
+                                    onChange={(e) => setPrinterSettings({ ...printerSettings, slogan: e.target.value })}
+                                    placeholder="例如: 純手工打造，帶走一份小幸運"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
+                                />
                             </div>
                         </div>
+                    )}
 
-                        {/* 3. 出紙動畫速度 */}
-                        <div className="space-y-2 pt-2 border-t border-slate-100">
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                    <i className="fa-solid fa-gauge-high text-amber-500"></i>
-                                    小票出紙列印速度
-                                </span>
-                                <span className="text-[11px] text-slate-400 font-bold">{printSpeed === '0' ? '關閉動畫' : `${printSpeed} 秒`}</span>
+                    {/* 分頁 2：小票打印機與樣式設定 */}
+                    {settingTab === 'printer' && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4 pop-in">
+                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                                <i className="fa-solid fa-print text-amber-500 text-sm"></i>
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">小票打印機與樣式設定</h3>
                             </div>
-                            <div className="grid grid-cols-4 gap-1.5">
-                                {[
-                                    { label: '極速 1.5s', val: '1.5' },
-                                    { label: '標準 4.5s', val: '4.5' },
-                                    { label: '慢速 7s', val: '7.0' },
-                                    { label: '關閉動畫', val: '0' }
-                                ].map(opt => (
+
+                            {/* 小票寬度與紙張質感 */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">小票紙張寬度：</label>
+                                    <div className="grid grid-cols-2 gap-1">
+                                        <button 
+                                            type="button"
+                                            onClick={() => setPrinterSettings({ ...printerSettings, paperWidth: '58mm' })}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                (printerSettings.paperWidth || '58mm') === '58mm' 
+                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
+                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            58mm 標準
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setPrinterSettings({ ...printerSettings, paperWidth: '80mm' })}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                printerSettings.paperWidth === '80mm' 
+                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
+                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            80mm 寬版
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">小票紙張質感：</label>
+                                    <div className="grid grid-cols-2 gap-1">
+                                        <button 
+                                            type="button"
+                                            onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'warm' })}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                printerSettings.paperTheme === 'warm' 
+                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
+                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            復古米黃
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'pure' })}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                printerSettings.paperTheme === 'pure' 
+                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
+                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            純白熱敏
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-1">頁尾感謝語 / 優惠標語：</label>
+                                <input 
+                                    type="text" 
+                                    value={printerSettings.thanksMsg}
+                                    onChange={(e) => setPrinterSettings({ ...printerSettings, thanksMsg: e.target.value })}
+                                    placeholder="例如: 感謝支持小老闆的手作夢想！"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
+                                />
+                            </div>
+
+                            {/* 紙張開關 */}
+                            <div className="space-y-2 pt-2 border-t border-slate-100">
+                                <div className="flex justify-between items-center text-xs">
+                                    <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={printerSettings.showSignature}
+                                            onChange={(e) => setPrinterSettings({ ...printerSettings, showSignature: e.target.checked })}
+                                            className="accent-amber-500 rounded w-4 h-4"
+                                        />
+                                        <span>顯示小老闆簽名欄</span>
+                                    </label>
+
+                                    <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={printerSettings.showSocialQr}
+                                            onChange={(e) => setPrinterSettings({ ...printerSettings, showSocialQr: e.target.checked })}
+                                            className="accent-amber-500 rounded w-4 h-4"
+                                        />
+                                        <span>顯示社群追蹤 QR</span>
+                                    </label>
+                                </div>
+
+                                {/* 社群 QR Code 圖片上傳區塊 */}
+                                {printerSettings.showSocialQr && (
+                                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                                        <label className="text-xs font-bold text-slate-700 block">社群追蹤 QR Code 圖片：</label>
+                                        {printerSettings.socialQrImage ? (
+                                            <div className="flex items-center space-x-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                                                <img src={printerSettings.socialQrImage} alt="社群 QR" className="w-16 h-16 object-contain rounded border bg-white shrink-0" />
+                                                <div className="flex-1 space-y-1">
+                                                    <p className="text-xs text-slate-800 font-bold">已設定社群 QR Code</p>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setPrinterSettings({ ...printerSettings, socialQrImage: '' })}
+                                                        className="text-xs text-rose-500 font-bold hover:underline"
+                                                    >
+                                                        移除並重新上傳
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <label className="flex items-center justify-center gap-2 p-3 bg-slate-50 border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl cursor-pointer transition-colors text-xs font-bold text-slate-600">
+                                                <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-base"></i>
+                                                <span>上傳 IG / FB 追蹤 QR Code 圖片</span>
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="hidden" 
+                                                    onChange={(e) => {
+                                                        const file = e.target.files && e.target.files[0];
+                                                        if (file) {
+                                                            const reader = new FileReader();
+                                                            reader.onload = (ev) => {
+                                                                setPrinterSettings({ ...printerSettings, socialQrImage: ev.target.result });
+                                                            };
+                                                            reader.readAsDataURL(file);
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 出紙速度 */}
+                            <div className="space-y-2 pt-2 border-t border-slate-100">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                        <i className="fa-solid fa-gauge-high text-amber-500"></i>
+                                        小票出紙列印速度
+                                    </span>
+                                    <span className="text-[11px] text-slate-400 font-bold">{printSpeed === '0' ? '關閉動畫' : `${printSpeed} 秒`}</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-1.5">
+                                    {[
+                                        { label: '極速 1.5s', val: '1.5' },
+                                        { label: '標準 4.5s', val: '4.5' },
+                                        { label: '慢速 7s', val: '7.0' },
+                                        { label: '關閉動畫', val: '0' }
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.val}
+                                            type="button"
+                                            onClick={() => setPrintSpeed(opt.val)}
+                                            className={`py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                                                printSpeed === opt.val
+                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm'
+                                                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 分頁 3：電子支付收款圖碼 */}
+                    {settingTab === 'payments' && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 pop-in">
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                                <div className="flex items-center space-x-2">
+                                    <i className="fa-solid fa-qrcode text-sky-500 text-sm"></i>
+                                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">電子支付收款圖碼</h3>
+                                </div>
+                                <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
+                                    已設定 {paymentMethods.filter(m => m.qr).length} / {paymentMethods.length}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
+                                {paymentMethods.map(method => (
                                     <button
-                                        key={opt.val}
-                                        onClick={() => setPrintSpeed(opt.val)}
-                                        className={`py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                                            printSpeed === opt.val
-                                                ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm'
-                                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                        key={method.id}
+                                        onClick={() => setActivePayTab(method.id)}
+                                        className={`py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative ${
+                                            activePayTab === method.id
+                                                ? 'bg-white text-slate-900 shadow-sm'
+                                                : 'text-slate-500 hover:text-slate-800'
                                         }`}
                                     >
-                                        {opt.label}
+                                        <i className={`fa-solid ${method.icon} text-xs ${method.qr ? 'text-emerald-500' : 'text-slate-400'}`}></i>
+                                        <span className="truncate w-full text-center">{method.name.split(' ')[0]}</span>
+                                        {method.qr && (
+                                            <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                        )}
                                     </button>
                                 ))}
                             </div>
-                        </div>
-                    </div>
 
-                    {/* 分類三：電子支付 QR Code 管理 */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                            <div className="flex items-center space-x-2">
-                                <i className="fa-solid fa-qrcode text-sky-500 text-sm"></i>
-                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">電子支付收款圖碼</h3>
-                            </div>
-                            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
-                                已設定 {paymentMethods.filter(m => m.qr).length} / {paymentMethods.length}
-                            </span>
-                        </div>
+                            {selectedPayMethod && (
+                                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center space-x-2">
+                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs ${selectedPayMethod.color}`}>
+                                                <i className={`fa-solid ${selectedPayMethod.icon}`}></i>
+                                            </div>
+                                            <span className="font-extrabold text-xs text-slate-800">{selectedPayMethod.name}</span>
+                                        </div>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${selectedPayMethod.qr ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                            {selectedPayMethod.qr ? '已設定收款碼' : '未設定'}
+                                        </span>
+                                    </div>
 
-                        {/* 支付方式切換頁籤 */}
-                        <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
-                            {paymentMethods.map(method => (
-                                <button
-                                    key={method.id}
-                                    onClick={() => setActivePayTab(method.id)}
-                                    className={`py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative ${
-                                        activePayTab === method.id
-                                            ? 'bg-white text-slate-900 shadow-sm'
-                                            : 'text-slate-500 hover:text-slate-800'
-                                    }`}
-                                >
-                                    <i className={`fa-solid ${method.icon} text-xs ${method.qr ? 'text-emerald-500' : 'text-slate-400'}`}></i>
-                                    <span className="truncate w-full text-center">{method.name.split(' ')[0]}</span>
-                                    {method.qr && (
-                                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                    {selectedPayMethod.qr ? (
+                                        <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-slate-200">
+                                            <img src={selectedPayMethod.qr} alt={selectedPayMethod.name} className="w-20 h-20 object-contain rounded-lg border shrink-0" />
+                                            <div className="flex-1 space-y-1">
+                                                <p className="text-xs text-slate-800 font-bold">收款 QR Code 運作中</p>
+                                                <p className="text-[10px] text-slate-400">結帳時選擇 {selectedPayMethod.name} 將自動展示此圖</p>
+                                                <button 
+                                                    onClick={() => removeQR(selectedPayMethod.id)}
+                                                    className="text-xs text-rose-500 hover:text-rose-700 font-bold underline text-[11px] pt-1 block"
+                                                >
+                                                    刪除並重新上傳
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <label className="block w-full border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl p-4 text-center cursor-pointer transition-colors bg-white">
+                                            <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-xl mb-1 block"></i>
+                                            <span className="text-xs font-bold text-slate-700 block">上傳 {selectedPayMethod.name} 收款碼照片</span>
+                                            <span className="text-[10px] text-slate-400 block mt-0.5">支援從手機相簿選擇圖片</span>
+                                            <input 
+                                                type="file" 
+                                                accept="image/*" 
+                                                className="hidden" 
+                                                onChange={(e) => handleQRUpload(selectedPayMethod.id, e)}
+                                            />
+                                        </label>
                                     )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* 分頁 3：資料維護 */}
+                    {settingTab === 'data' && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 pop-in">
+                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                                <i className="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">資料維護與重置</h3>
+                            </div>
+
+                            <p className="text-xs text-slate-500">如果想在新的市集活動開始前清空測試數據，可以在這裡恢復成預設狀態。</p>
+
+                            {!showResetConfirm ? (
+                                <button 
+                                    onClick={() => setShowResetConfirm(true)}
+                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition-colors border border-slate-200 flex items-center justify-center gap-1.5"
+                                >
+                                    <i className="fa-solid fa-rotate-left text-slate-500"></i>
+                                    <span>重置所有資料與範例商品</span>
                                 </button>
-                            ))}
-                        </div>
-
-                        {/* 當前選中的支付方式 QR 設定面板 */}
-                        {selectedPayMethod && (
-                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center space-x-2">
-                                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs ${selectedPayMethod.color}`}>
-                                            <i className={`fa-solid ${selectedPayMethod.icon}`}></i>
-                                        </div>
-                                        <span className="font-extrabold text-xs text-slate-800">{selectedPayMethod.name}</span>
+                            ) : (
+                                <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl text-center space-y-2">
+                                    <p className="text-xs font-bold text-rose-700">確定重置為預設資料？所有商品與銷售紀錄將被清除。</p>
+                                    <div className="flex gap-2 justify-center pt-1">
+                                        <button 
+                                            onClick={() => { resetDemoData(); setShowResetConfirm(false); }}
+                                            className="bg-rose-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs shadow-sm"
+                                        >
+                                            確認重置
+                                        </button>
+                                        <button 
+                                            onClick={() => setShowResetConfirm(false)}
+                                            className="bg-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl text-xs"
+                                        >
+                                            取消
+                                        </button>
                                     </div>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${selectedPayMethod.qr ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                        {selectedPayMethod.qr ? '已設定收款碼' : '未設定'}
-                                    </span>
                                 </div>
-
-                                {selectedPayMethod.qr ? (
-                                    <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-slate-200">
-                                        <img src={selectedPayMethod.qr} alt={selectedPayMethod.name} className="w-20 h-20 object-contain rounded-lg border shrink-0" />
-                                        <div className="flex-1 space-y-1">
-                                            <p className="text-xs text-slate-800 font-bold">收款 QR Code 運作中</p>
-                                            <p className="text-[10px] text-slate-400">結帳時選擇 {selectedPayMethod.name} 將自動展示此圖</p>
-                                            <button 
-                                                onClick={() => removeQR(selectedPayMethod.id)}
-                                                className="text-xs text-rose-500 hover:text-rose-700 font-bold underline text-[11px] pt-1 block"
-                                            >
-                                                刪除並重新上傳
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <label className="block w-full border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl p-4 text-center cursor-pointer transition-colors bg-white">
-                                        <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-xl mb-1 block"></i>
-                                        <span className="text-xs font-bold text-slate-700 block">上傳 {selectedPayMethod.name} 收款碼照片</span>
-                                        <span className="text-[10px] text-slate-400 block mt-0.5">支援從手機相簿選擇圖片</span>
-                                        <input 
-                                            type="file" 
-                                            accept="image/*" 
-                                            className="hidden" 
-                                            onChange={(e) => handleQRUpload(selectedPayMethod.id, e)}
-                                        />
-                                    </label>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* 分類四：系統維護與重置 */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                        <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
-                            <i className="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
-                            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">資料維護</h3>
+                            )}
                         </div>
-
-                        {!showResetConfirm ? (
-                            <button 
-                                onClick={() => setShowResetConfirm(true)}
-                                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors border border-slate-200 flex items-center justify-center gap-1.5"
-                            >
-                                <i className="fa-solid fa-rotate-left text-slate-500"></i>
-                                <span>重置所有資料與範例商品</span>
-                            </button>
-                        ) : (
-                            <div className="bg-rose-50 border border-rose-200 p-3 rounded-2xl text-center space-y-2">
-                                <p className="text-xs font-bold text-rose-700">確定重置為預設資料？所有商品與銷售紀錄將被清除。</p>
-                                <div className="flex gap-2 justify-center">
-                                    <button 
-                                        onClick={() => { resetDemoData(); setShowResetConfirm(false); }}
-                                        className="bg-rose-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs shadow-sm"
-                                    >
-                                        確認重置
-                                    </button>
-                                    <button 
-                                        onClick={() => setShowResetConfirm(false)}
-                                        className="bg-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl text-xs"
-                                    >
-                                        取消
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </div>
             );
         }
