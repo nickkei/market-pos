@@ -1292,6 +1292,7 @@
             const [animKey] = React.useState(0);
             const [isPrinting, setIsPrinting] = React.useState(false);
             const [printProgress, setPrintProgress] = React.useState(100);
+            const [isSharing, setIsSharing] = React.useState(false);
 
             React.useEffect(() => {
                 const duration = parseFloat(printSpeed);
@@ -1353,6 +1354,48 @@
                     link.download = `${shopName}_${filePrefix}_${new Date().toISOString().slice(0, 10)}.jpg`;
                     link.href = canvas.toDataURL('image/jpeg', 0.92);
                     link.click();
+                });
+            };
+
+            const handleSharePrint = () => {
+                const element = document.getElementById('printable-receipt');
+                if (!element) return;
+                setIsSharing(true);
+
+                html2canvas(element, {
+                    scale: 3,
+                    useCORS: true,
+                    backgroundColor: printerSettings.paperTheme === 'pure' ? '#FFFFFF' : '#FFFDF7'
+                }).then(canvas => {
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            setIsSharing(false);
+                            downloadJPG();
+                            return;
+                        }
+
+                        const fileName = `${shopName}_小票_${Date.now()}.jpg`;
+                        const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            navigator.share({
+                                files: [file],
+                                title: `${shopName} 小票列印`,
+                                text: '請選擇熱敏印表機 APP 或 RawBT 進行列印'
+                            }).then(() => {
+                                setIsSharing(false);
+                            }).catch((err) => {
+                                console.warn('Share cancelled or error:', err);
+                                setIsSharing(false);
+                            });
+                        } else {
+                            setIsSharing(false);
+                            downloadJPG();
+                        }
+                    }, 'image/jpeg', 0.92);
+                }).catch(err => {
+                    console.error(err);
+                    setIsSharing(false);
                 });
             };
 
@@ -1522,10 +1565,18 @@
                             </div>
                         </div>
 
-                        <div className="pt-1">
+                        <div className="pt-1 grid grid-cols-2 gap-2">
+                            <button 
+                                onClick={handleSharePrint}
+                                disabled={isSharing}
+                                className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                <i className="fa-solid fa-print text-sm"></i>
+                                <span>{isSharing ? '處理中...' : '🖨️ 藍牙/手機列印'}</span>
+                            </button>
                             <button 
                                 onClick={downloadJPG}
-                                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-extrabold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 border border-slate-700 bounce-active shadow-lg"
+                                className="bg-slate-800 hover:bg-slate-700 text-white font-extrabold py-3 rounded-2xl text-xs flex items-center justify-center gap-1.5 border border-slate-700 bounce-active shadow-lg"
                             >
                                 <i className="fa-solid fa-image text-sky-400 text-sm"></i>
                                 <span>下載 JPG 圖片</span>
@@ -1544,140 +1595,145 @@
             const quickBills = [10, 20, 50, 100, 500];
 
             return (
-                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in overflow-y-auto">
-                    <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b pb-2">
-                            <h3 className="font-black text-base text-slate-800 flex items-center gap-2">
-                                <i className="fa-solid fa-cash-register text-amber-500"></i>
+                <div className="fixed inset-0 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 pop-in">
+                    <div className="bg-white w-full max-w-md rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[96vh] flex flex-col justify-between overflow-hidden border border-slate-100">
+                        {/* 頂部標題與關閉 */}
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 shrink-0">
+                            <h3 className="font-black text-base sm:text-lg text-slate-800 flex items-center gap-2">
+                                <i className="fa-solid fa-cash-register text-amber-500 text-lg"></i>
                                 顧客結帳與付款
                             </h3>
-                            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1">
-                                <i className="fa-solid fa-xmark text-lg"></i>
+                            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors">
+                                <i className="fa-solid fa-xmark text-xl"></i>
                             </button>
                         </div>
 
-                        <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-4 rounded-2xl text-white text-center shadow-md space-y-1">
-                            <span className="text-xs font-bold text-amber-100 block">實收金額</span>
-                            <div className="flex items-baseline justify-center space-x-2">
-                                <span className="text-3xl font-black">${finalPayable}</span>
-                                {discount > 0 && (
-                                    <span className="text-xs line-through text-amber-200">原價 ${cartTotal}</span>
-                                )}
+                        {/* 實收金額與促銷折扣區 */}
+                        <div className="bg-slate-900 text-white p-3.5 sm:p-4 rounded-2xl shadow-md space-y-3 shrink-0">
+                            <div className="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                                <span className="text-xs sm:text-sm font-bold text-slate-300">結帳實收金額</span>
+                                <div className="flex items-baseline space-x-2">
+                                    <span className="text-3xl sm:text-4xl font-black text-amber-400 font-mono">${finalPayable}</span>
+                                    {discount > 0 && (
+                                        <span className="text-xs line-through text-slate-400 font-mono">原價 ${cartTotal}</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 折扣選擇列 */}
+                            <div className="space-y-1.5">
+                                <span className="text-xs text-slate-300 font-bold block">促銷折扣：</span>
+                                <div className="grid grid-cols-5 gap-1.5">
+                                    {[
+                                        { label: '無折扣', val: 0 },
+                                        { label: '-$5', val: 5 },
+                                        { label: '-$10', val: 10 },
+                                        { label: '9折', val: Math.round(cartTotal * 0.1) },
+                                        { label: '85折', val: Math.round(cartTotal * 0.15) }
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.label} type="button" onClick={() => setDiscount(opt.val)}
+                                            className={`py-2 rounded-xl font-extrabold text-xs transition-all text-center ${
+                                                discount === opt.val ? 'bg-rose-500 text-white shadow-md scale-105' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
-                        <div className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                            <label className="text-[11px] font-bold text-slate-600 block">🏷️ 促銷折扣優惠：</label>
-                            <div className="grid grid-cols-5 gap-1 text-xs">
-                                {[
-                                    { label: '無折扣', val: 0 },
-                                    { label: '-$5', val: 5 },
-                                    { label: '-$10', val: 10 },
-                                    { label: '9折', val: Math.round(cartTotal * 0.1) },
-                                    { label: '85折', val: Math.round(cartTotal * 0.15) }
-                                ].map(opt => (
-                                    <button
-                                        key={opt.label} type="button" onClick={() => setDiscount(opt.val)}
-                                        className={`py-1.5 rounded-xl font-bold text-[10px] transition-all border ${
-                                            discount === opt.val ? 'bg-rose-500 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                                        }`}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 block">選擇付款方式：</label>
-                            <div className="grid grid-cols-2 gap-2">
+                        {/* 付款方式切換區 */}
+                        <div className="space-y-1.5 shrink-0">
+                            <label className="text-xs font-bold text-slate-600 block">選擇付款方式：</label>
+                            <div className="grid grid-cols-3 gap-1.5">
                                 <button 
                                     onClick={() => setPayMethod('cash')}
-                                    className={`p-3 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-2 transition-all ${
-                                        payMethod === 'cash' ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                    className={`py-2.5 px-3 rounded-2xl border font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 transition-all ${
+                                        payMethod === 'cash' ? 'bg-amber-100 border-amber-400 text-amber-950 shadow-md ring-2 ring-amber-400/30' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                                     }`}
                                 >
-                                    <i className="fa-solid fa-money-bill-wave text-emerald-500 text-base"></i>
-                                    <span>現金支付</span>
+                                    <i className="fa-solid fa-money-bill-wave text-emerald-600 text-sm"></i>
+                                    <span>現金</span>
                                 </button>
                                 {paymentMethods.map(m => (
                                     <button 
                                         key={m.id} onClick={() => setPayMethod(m.id)}
-                                        className={`p-2.5 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition-all ${
-                                            payMethod === m.id ? 'bg-sky-100 border-sky-400 text-sky-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                        className={`py-2.5 px-2 rounded-2xl border font-black text-xs sm:text-sm flex items-center justify-center space-x-1.5 transition-all ${
+                                            payMethod === m.id ? 'bg-sky-100 border-sky-400 text-sky-950 shadow-md ring-2 ring-sky-400/30' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                                         }`}
                                     >
                                         <i className={`fa-solid ${m.icon} text-sm`}></i>
-                                        <span className="truncate">{m.name}</span>
+                                        <span className="truncate">{m.name.split(' ')[0]}</span>
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        {payMethod === 'cash' ? (
-                            <div className="space-y-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
-                                <div>
-                                    <label className="text-xs font-bold text-slate-600 block mb-1">顧客給的金額：</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
-                                        <input 
-                                            type="number" value={cashReceived} onChange={(e) => setCashReceived(e.target.value)}
-                                            placeholder={finalPayable.toString()}
-                                            className="w-full pl-7 pr-3 py-2 border rounded-xl font-black text-lg outline-none focus:border-amber-400 bg-white"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                    <button 
-                                        onClick={() => setCashReceived(finalPayable.toString())} 
-                                        className="bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold px-2.5 py-1 rounded-lg text-xs"
-                                    >
-                                        剛好 ${finalPayable}
-                                    </button>
-                                    {quickBills.map(b => (
+                        {/* 現金算鈔 / 電子支付 QR 展示區 */}
+                        <div className="flex-1 overflow-y-auto no-scrollbar py-1">
+                            {payMethod === 'cash' ? (
+                                <div className="space-y-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 relative">
+                                            <span className="absolute left-3 top-2 text-slate-400 font-black text-base">$</span>
+                                            <input 
+                                                type="number" value={cashReceived} onChange={(e) => setCashReceived(e.target.value)}
+                                                placeholder={finalPayable.toString()}
+                                                className="w-full pl-7 pr-3 py-2 border rounded-xl font-black text-lg outline-none focus:border-amber-400 bg-white shadow-inner font-mono text-slate-800"
+                                            />
+                                        </div>
                                         <button 
-                                            key={b} onClick={() => setCashReceived(b.toString())}
-                                            className="bg-white border text-slate-700 font-bold px-2 py-1 rounded-lg text-xs hover:bg-slate-100"
+                                            onClick={() => setCashReceived(finalPayable.toString())} 
+                                            className="bg-amber-200 hover:bg-amber-300 text-amber-950 font-black px-3 py-2.5 rounded-xl text-xs shrink-0 shadow-sm bounce-active"
                                         >
-                                            ${b}
+                                            剛好 ${finalPayable}
                                         </button>
-                                    ))}
-                                </div>
-                                <div className="bg-white p-3 rounded-xl border flex justify-between items-center">
-                                    <span className="text-xs font-bold text-slate-600">應找金額：</span>
-                                    <span className={`text-xl font-black ${change < 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
-                                        ${numCash >= finalPayable ? change : 0}
-                                    </span>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center space-y-3">
-                                <h4 className="font-bold text-xs text-slate-700 flex items-center justify-center gap-1">
-                                    <i className="fa-solid fa-qrcode text-sky-500"></i>
-                                    請展示下方 {selectedPayObj?.name} QR Code 給顧客掃碼
-                                </h4>
-                                {selectedPayObj?.qr ? (
-                                    <div className="bg-white p-3 rounded-2xl shadow-inner inline-block border border-slate-200">
-                                        <img src={selectedPayObj.qr} alt={selectedPayObj.name} className="w-44 h-44 object-contain mx-auto" />
                                     </div>
-                                ) : (
-                                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-amber-800 text-xs font-bold space-y-1">
-                                        <i className="fa-solid fa-circle-info text-lg text-amber-500"></i>
-                                        <p>尚未設定 {selectedPayObj?.name} 的收款 QR Code 圖片。</p>
-                                        <p className="text-[10px] text-amber-600">可以在「系統設定」分頁中上傳！</p>
-                                    </div>
-                                )}
-                                <p className="text-[11px] font-bold text-slate-500">
-                                    確認收到 <span className="text-amber-600 font-black text-sm">${finalPayable}</span> 後請點擊下方確認按鈕。
-                                </p>
-                            </div>
-                        )}
 
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {quickBills.map(b => (
+                                            <button 
+                                                key={b} onClick={() => setCashReceived(b.toString())}
+                                                className="bg-white border border-slate-200 text-slate-700 font-black px-3 py-1.5 rounded-xl text-xs hover:bg-slate-100 shadow-sm font-mono active:scale-95 transition-all"
+                                            >
+                                                ${b}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="bg-white px-3 py-2.5 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                                        <span className="text-xs sm:text-sm font-extrabold text-slate-600">應找金額：</span>
+                                        <span className={`text-xl sm:text-2xl font-black font-mono ${change < 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+                                            ${numCash >= finalPayable ? change : 0}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center space-y-2">
+                                    <p className="font-extrabold text-xs sm:text-sm text-slate-700">
+                                        請展示 {selectedPayObj?.name} QR Code 給顧客掃碼
+                                    </p>
+                                    {selectedPayObj?.qr ? (
+                                        <div className="bg-white p-2 rounded-2xl shadow-sm inline-block border border-slate-200">
+                                            <img src={selectedPayObj.qr} alt={selectedPayObj.name} className="w-32 h-32 sm:w-36 sm:h-36 object-contain mx-auto" />
+                                        </div>
+                                    ) : (
+                                        <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl text-amber-800 text-xs font-bold">
+                                            <p>尚未設定 {selectedPayObj?.name} 的收款 QR Code 圖片。</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 底部固定完成按鈕 */}
                         <button 
                             onClick={onConfirm}
-                            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 rounded-2xl text-sm shadow-lg bounce-active flex items-center justify-center space-x-2"
+                            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base shadow-lg bounce-active flex items-center justify-center space-x-2 shrink-0 tracking-wider"
                         >
-                            <i className="fa-solid fa-check text-base"></i>
+                            <i className="fa-solid fa-check text-lg"></i>
                             <span>完成交易扣減庫存</span>
                         </button>
                     </div>
