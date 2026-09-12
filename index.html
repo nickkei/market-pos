@@ -88,7 +88,7 @@
             background-image: repeating-linear-gradient(90deg, #475569 0px, #475569 3px, #0F172A 3px, #0F172A 6px);
         }
 
-        /* 物理真實吐紙 Keyframes：小票由狹縫內部 (-100%) 勻速位移推出 (0%) */
+        /* 物理真實吐紙 Keyframes：小票由狹縫內部勻速推出 */
         @keyframes realPhysicalPrintFeed {
             0% {
                 transform: translateY(-100%);
@@ -126,18 +126,18 @@
 
     <script type="text/babel">
         const DEFAULT_PRODUCTS = [
-            { id: 'p1', name: '手作黏土公仔', price: 30, stock: 10, icon: '🎨', color: 'bg-rose-100 text-rose-600' },
-            { id: 'p2', name: '手繪插畫明信片', price: 15, stock: 25, icon: '🖼️', color: 'bg-amber-100 text-amber-600' },
-            { id: 'p3', name: '羊毛氈鑰匙圈', price: 45, stock: 8, icon: '🔑', color: 'bg-emerald-100 text-emerald-600' },
-            { id: 'p4', name: '繽紛串珠手鍊', price: 20, stock: 15, icon: '📿', color: 'bg-sky-100 text-sky-600' },
-            { id: 'p5', name: '文創可愛貼紙包', price: 10, stock: 30, icon: '🏷️', color: 'bg-purple-100 text-purple-600' },
+            { id: 'p1', name: '手作黏土公仔', price: 30, stock: 10, icon: '🎨' },
+            { id: 'p2', name: '手繪插畫明信片', price: 15, stock: 25, icon: '🖼️' },
+            { id: 'p3', name: '羊毛氈鑰匙圈', price: 45, stock: 8, icon: '🔑' },
+            { id: 'p4', name: '繽紛串珠手鍊', price: 20, stock: 15, icon: '📿' },
+            { id: 'p5', name: '文創可愛貼紙包', price: 10, stock: 30, icon: '🏷️' },
         ];
 
         const DEFAULT_PAYMENTS = [
-            { id: 'pay_mpay', name: 'MPay 澳門通', icon: 'fa-mobile-screen-button', color: 'bg-red-500 text-white', qr: '' },
-            { id: 'pay_fps', name: '轉數快 / 聚易用', icon: 'fa-qrcode', color: 'bg-emerald-600 text-white', qr: '' },
-            { id: 'pay_wx', name: '微信支付', icon: 'fa-weixin', color: 'bg-green-500 text-white', qr: '' },
-            { id: 'pay_ali', name: '支付寶', icon: 'fa-alipay', color: 'bg-blue-500 text-white', qr: '' }
+            { id: 'pay_mpay', name: 'MPay 澳門通', icon: 'fa-mobile-screen-button', qr: '' },
+            { id: 'pay_fps', name: '轉數快 / 聚易用', icon: 'fa-qrcode', qr: '' },
+            { id: 'pay_wx', name: '微信支付', icon: 'fa-weixin', qr: '' },
+            { id: 'pay_ali', name: '支付寶', icon: 'fa-alipay', qr: '' }
         ];
 
         const DEFAULT_PRINTER_SETTINGS = {
@@ -177,6 +177,11 @@
                 return saved ? JSON.parse(saved) : [];
             });
 
+            const [dailyGoal, setDailyGoal] = React.useState(() => {
+                const saved = localStorage.getItem('market_daily_goal');
+                return saved ? Number(saved) : 500;
+            });
+
             const [printSpeed, setPrintSpeed] = React.useState(() => {
                 return localStorage.getItem('market_print_speed') || '4.5';
             });
@@ -186,63 +191,48 @@
             const [checkoutModal, setCheckoutModal] = React.useState(false);
             const [payMethod, setPayMethod] = React.useState('cash');
             const [cashReceived, setCashReceived] = React.useState('');
+            const [discount, setDiscount] = React.useState(0);
             const [editProductModal, setEditProductModal] = React.useState(null);
             const [showSuccessModal, setShowSuccessModal] = React.useState(false);
             const [lastTransaction, setLastTransaction] = React.useState(null);
             const [receiptModal, setReceiptModal] = React.useState(false);
             const [selectedTxForReceipt, setSelectedTxForReceipt] = React.useState(null);
 
-            React.useEffect(() => {
-                localStorage.setItem('market_shop_name', shopName);
-            }, [shopName]);
+            // 安全寫入 localStorage
+            const safeSetStorage = (key, val) => {
+                try {
+                    localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+                } catch (e) {
+                    console.warn(`localStorage quota warning for ${key}:`, e);
+                }
+            };
 
-            React.useEffect(() => {
-                localStorage.setItem('market_products', JSON.stringify(products));
-            }, [products]);
-
-            React.useEffect(() => {
-                localStorage.setItem('market_payments', JSON.stringify(paymentMethods));
-            }, [paymentMethods]);
-
-            React.useEffect(() => {
-                localStorage.setItem('market_printer_settings', JSON.stringify(printerSettings));
-            }, [printerSettings]);
-
-            React.useEffect(() => {
-                localStorage.setItem('market_sales', JSON.stringify(salesHistory));
-            }, [salesHistory]);
-
-            React.useEffect(() => {
-                localStorage.setItem('market_print_speed', printSpeed);
-            }, [printSpeed]);
+            React.useEffect(() => { safeSetStorage('market_shop_name', shopName); }, [shopName]);
+            React.useEffect(() => { safeSetStorage('market_products', products); }, [products]);
+            React.useEffect(() => { safeSetStorage('market_payments', paymentMethods); }, [paymentMethods]);
+            React.useEffect(() => { safeSetStorage('market_printer_settings', printerSettings); }, [printerSettings]);
+            React.useEffect(() => { safeSetStorage('market_sales', salesHistory); }, [salesHistory]);
+            React.useEffect(() => { safeSetStorage('market_daily_goal', dailyGoal.toString()); }, [dailyGoal]);
+            React.useEffect(() => { safeSetStorage('market_print_speed', printSpeed); }, [printSpeed]);
 
             const cartTotal = cart.reduce((sum, item) => sum + (item.product.price * item.qty), 0);
             const cartItemCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
             const exportSalesCSV = () => {
                 if (salesHistory.length === 0) return;
-
-                let csvContent = "\uFEFF";
-                csvContent += "交易編號,交易時間,商品名稱,單價,數量,小計,支付方式,顧客付額,找零\n";
-
+                let csvContent = "\uFEFF交易單號,交易時間,商品名稱,單價,數量,小計,原價總額,折扣金額,實收總額,支付方式,顧客付額,找零\n";
                 salesHistory.forEach(tx => {
                     const timeStr = new Date(tx.timestamp).toLocaleString();
+                    const seqStr = tx.seqNo || tx.id;
                     tx.items.forEach(item => {
-                        const row = [
-                            `"${tx.id}"`,
-                            `"${timeStr}"`,
-                            `"${item.name}"`,
-                            item.price,
-                            item.qty,
-                            item.price * item.qty,
-                            `"${tx.paymentName}"`,
-                            tx.cashReceived,
-                            tx.change
-                        ].join(",");
-                        csvContent += row + "\n";
+                        csvContent += [
+                            `"${seqStr}"`, `"${timeStr}"`, `"${item.name}"`,
+                            item.price, item.qty, item.price * item.qty,
+                            tx.subtotal || tx.totalAmount, tx.discountAmount || 0,
+                            tx.totalAmount, `"${tx.paymentName}"`, tx.cashReceived, tx.change
+                        ].join(",") + "\n";
                     });
                 });
-
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
@@ -253,19 +243,66 @@
                 document.body.removeChild(link);
             };
 
+            const exportJSONBackup = () => {
+                const backupData = {
+                    version: '1.0', exportDate: new Date().toISOString(),
+                    shopName, products, paymentMethods, printerSettings, salesHistory, dailyGoal, printSpeed
+                };
+                const jsonStr = JSON.stringify(backupData, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `${shopName}_全站資料備份_${new Date().toISOString().slice(0,10)}.json`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const importJSONBackup = (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (data.shopName) setShopName(data.shopName);
+                        if (Array.isArray(data.products)) setProducts(data.products);
+                        if (Array.isArray(data.paymentMethods)) setPaymentMethods(data.paymentMethods);
+                        if (data.printerSettings) setPrinterSettings(data.printerSettings);
+                        if (Array.isArray(data.salesHistory)) setSalesHistory(data.salesHistory);
+                        if (data.dailyGoal) setDailyGoal(Number(data.dailyGoal));
+                        if (data.printSpeed) setPrintSpeed(data.printSpeed);
+                        alert('🎉 成功匯入全站備份資料！');
+                    } catch (err) {
+                        alert('⚠️ 匯入失敗：檔案格式不正確！');
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleVoidTransaction = (txId) => {
+                const targetTx = salesHistory.find(t => t.id === txId);
+                if (!targetTx) return;
+
+                setProducts(prevProducts => {
+                    return prevProducts.map(p => {
+                        const itemInTx = targetTx.items.find(i => i.id === p.id);
+                        return itemInTx ? { ...p, stock: p.stock + itemInTx.qty } : p;
+                    });
+                });
+                setSalesHistory(prev => prev.filter(t => t.id !== txId));
+            };
+
             const addToCart = (product) => {
                 if (product.stock <= 0) return;
-                
                 setCart(prev => {
                     const existing = prev.find(item => item.id === product.id);
                     const currentQty = existing ? existing.qty : 0;
                     if (currentQty >= product.stock) return prev;
-
-                    if (existing) {
-                        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
-                    } else {
-                        return [...prev, { id: product.id, product, qty: 1 }];
-                    }
+                    return existing 
+                        ? prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item)
+                        : [...prev, { id: product.id, product, qty: 1 }];
                 });
             };
 
@@ -284,31 +321,24 @@
                 });
             };
 
-            const clearCart = () => {
-                setCart([]);
-            };
+            const clearCart = () => setCart([]);
 
             const handleCompleteCheckout = () => {
                 if (cart.length === 0) return;
-
-                try {
-                    confetti({
-                        particleCount: 80,
-                        spread: 70,
-                        origin: { y: 0.6 }
-                    });
-                } catch(e) {}
+                try { confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } }); } catch(e) {}
 
                 const updatedProducts = products.map(p => {
                     const cartItem = cart.find(ci => ci.id === p.id);
-                    if (cartItem) {
-                        return { ...p, stock: Math.max(0, p.stock - cartItem.qty) };
-                    }
-                    return p;
+                    return cartItem ? { ...p, stock: Math.max(0, p.stock - cartItem.qty) } : p;
                 });
+
+                const finalPayable = Math.max(0, cartTotal - discount);
+                const nextSeqNum = salesHistory.length + 1;
+                const seqNoStr = `#${String(nextSeqNum).padStart(4, '0')}`;
 
                 const transaction = {
                     id: 'tx_' + Date.now(),
+                    seqNo: seqNoStr,
                     timestamp: new Date().toISOString(),
                     items: cart.map(item => ({
                         id: item.product.id,
@@ -316,18 +346,20 @@
                         price: item.product.price,
                         qty: item.qty
                     })),
-                    totalAmount: cartTotal,
+                    subtotal: cartTotal,
+                    discountAmount: discount,
+                    totalAmount: finalPayable,
                     paymentMethod: payMethod,
                     paymentName: payMethod === 'cash' ? '現金' : (paymentMethods.find(m => m.id === payMethod)?.name || '電子支付'),
-                    cashReceived: payMethod === 'cash' ? (parseFloat(cashReceived) || cartTotal) : cartTotal,
-                    change: payMethod === 'cash' ? Math.max(0, (parseFloat(cashReceived) || cartTotal) - cartTotal) : 0
+                    cashReceived: payMethod === 'cash' ? (parseFloat(cashReceived) || finalPayable) : finalPayable,
+                    change: payMethod === 'cash' ? Math.max(0, (parseFloat(cashReceived) || finalPayable) - finalPayable) : 0
                 };
 
                 setProducts(updatedProducts);
                 setSalesHistory(prev => [transaction, ...prev]);
                 setLastTransaction(transaction);
-                
                 setCart([]);
+                setDiscount(0);
                 setCheckoutModal(false);
                 setCashReceived('');
                 setShowSuccessModal(true);
@@ -335,8 +367,6 @@
 
             return (
                 <div className="flex flex-col app-container w-full max-w-lg mx-auto bg-white shadow-2xl relative overflow-hidden border-x border-slate-200">
-                    
-                    {/* Header */}
                     <header className="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 p-4 text-white shadow-md flex justify-between items-center z-10 shrink-0">
                         <div className="flex items-center space-x-2.5">
                             <span className="text-3xl bg-white/20 p-2 rounded-2xl backdrop-blur-sm">🏬</span>
@@ -353,134 +383,72 @@
                         </div>
                     </header>
 
-                    {/* Main Viewport */}
                     <main className="flex-1 overflow-y-auto bg-slate-50 relative pb-24">
                         {activeTab === 'pos' && (
                             <PosView 
-                                products={products} 
-                                cart={cart} 
-                                addToCart={addToCart} 
-                                updateCartQty={updateCartQty}
-                                clearCart={clearCart}
-                                cartTotal={cartTotal}
-                                cartItemCount={cartItemCount}
+                                products={products} cart={cart} addToCart={addToCart} updateCartQty={updateCartQty}
+                                clearCart={clearCart} cartTotal={cartTotal} cartItemCount={cartItemCount}
                                 openCheckout={() => setCheckoutModal(true)}
                             />
                         )}
-
                         {activeTab === 'inventory' && (
                             <InventoryView 
-                                products={products} 
-                                setProducts={setProducts}
-                                openEditModal={(p) => setEditProductModal(p)}
+                                products={products} setProducts={setProducts} openEditModal={(p) => setEditProductModal(p)}
                             />
                         )}
-
                         {activeTab === 'stats' && (
                             <StatsView 
-                                salesHistory={salesHistory}
-                                products={products}
-                                openReceiptModal={(tx = null) => {
-                                    setSelectedTxForReceipt(tx);
-                                    setReceiptModal(true);
-                                }}
-                                exportCSV={exportSalesCSV}
-                                clearHistory={() => setSalesHistory([])}
+                                salesHistory={salesHistory} products={products} dailyGoal={dailyGoal}
+                                setDailyGoal={setDailyGoal} voidTransaction={handleVoidTransaction}
+                                openReceiptModal={(tx = null) => { setSelectedTxForReceipt(tx); setReceiptModal(true); }}
+                                exportCSV={exportSalesCSV} clearHistory={() => setSalesHistory([])}
                             />
                         )}
-
                         {activeTab === 'settings' && (
                             <SettingsView 
-                                shopName={shopName}
-                                setShopName={setShopName}
-                                paymentMethods={paymentMethods}
-                                setPaymentMethods={setPaymentMethods}
-                                printerSettings={printerSettings}
-                                setPrinterSettings={setPrinterSettings}
-                                printSpeed={printSpeed}
-                                setPrintSpeed={setPrintSpeed}
+                                shopName={shopName} setShopName={setShopName}
+                                paymentMethods={paymentMethods} setPaymentMethods={setPaymentMethods}
+                                printerSettings={printerSettings} setPrinterSettings={setPrinterSettings}
+                                printSpeed={printSpeed} setPrintSpeed={setPrintSpeed}
+                                exportBackup={exportJSONBackup} importBackup={importJSONBackup}
                                 resetDemoData={() => {
-                                    setProducts(DEFAULT_PRODUCTS);
-                                    setPaymentMethods(DEFAULT_PAYMENTS);
-                                    setPrinterSettings(DEFAULT_PRINTER_SETTINGS);
-                                    setSalesHistory([]);
-                                    setShopName('小老闆文創市集助手');
-                                    setPrintSpeed('4.5');
+                                    setProducts(DEFAULT_PRODUCTS); setPaymentMethods(DEFAULT_PAYMENTS);
+                                    setPrinterSettings(DEFAULT_PRINTER_SETTINGS); setSalesHistory([]);
+                                    setDailyGoal(500); setShopName('小老闆文創市集助手'); setPrintSpeed('4.5');
                                     localStorage.clear();
                                 }}
                             />
                         )}
                     </main>
 
-                    {/* Bottom Navigation */}
                     <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-2 py-2 flex justify-around items-center z-10 shadow-lg">
-                        <NavButton 
-                            active={activeTab === 'pos'} 
-                            onClick={() => setActiveTab('pos')} 
-                            icon="fa-cash-register" 
-                            label="收銀台" 
-                            badge={cartItemCount}
-                        />
-                        <NavButton 
-                            active={activeTab === 'inventory'} 
-                            onClick={() => setActiveTab('inventory')} 
-                            icon="fa-boxes-stacked" 
-                            label="庫存/商品" 
-                        />
-                        <NavButton 
-                            active={activeTab === 'stats'} 
-                            onClick={() => setActiveTab('stats')} 
-                            icon="fa-chart-pie" 
-                            label="營業統計" 
-                        />
-                        <NavButton 
-                            active={activeTab === 'settings'} 
-                            onClick={() => setActiveTab('settings')} 
-                            icon="fa-sliders" 
-                            label="系統設定" 
-                        />
+                        <NavButton active={activeTab === 'pos'} onClick={() => setActiveTab('pos')} icon="fa-cash-register" label="收銀台" badge={cartItemCount} />
+                        <NavButton active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} icon="fa-boxes-stacked" label="庫存/商品" />
+                        <NavButton active={activeTab === 'stats'} onClick={() => setActiveTab('stats')} icon="fa-chart-pie" label="營業統計" />
+                        <NavButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon="fa-sliders" label="系統設定" />
                     </nav>
 
-                    {/* Modals */}
                     {receiptModal && (
                         <ReceiptModal 
-                            shopName={shopName}
-                            salesHistory={salesHistory}
-                            transaction={selectedTxForReceipt}
-                            printerSettings={printerSettings}
-                            printSpeed={printSpeed}
-                            onClose={() => {
-                                setReceiptModal(false);
-                                setSelectedTxForReceipt(null);
-                            }}
+                            shopName={shopName} salesHistory={salesHistory} transaction={selectedTxForReceipt}
+                            printerSettings={printerSettings} printSpeed={printSpeed}
+                            onClose={() => { setReceiptModal(false); setSelectedTxForReceipt(null); }}
                         />
                     )}
-
                     {checkoutModal && (
                         <CheckoutModal 
-                            cart={cart}
-                            cartTotal={cartTotal}
-                            paymentMethods={paymentMethods}
-                            payMethod={payMethod}
-                            setPayMethod={setPayMethod}
-                            cashReceived={cashReceived}
-                            setCashReceived={setCashReceived}
-                            onClose={() => setCheckoutModal(false)}
-                            onConfirm={handleCompleteCheckout}
+                            cart={cart} cartTotal={cartTotal} discount={discount} setDiscount={setDiscount}
+                            paymentMethods={paymentMethods} payMethod={payMethod} setPayMethod={setPayMethod}
+                            cashReceived={cashReceived} setCashReceived={setCashReceived}
+                            onClose={() => { setCheckoutModal(false); setDiscount(0); }} onConfirm={handleCompleteCheckout}
                         />
                     )}
-
                     {showSuccessModal && lastTransaction && (
                         <SuccessModal 
-                            transaction={lastTransaction}
-                            onClose={() => setShowSuccessModal(false)}
-                            onOpenReceipt={(tx) => {
-                                setSelectedTxForReceipt(tx);
-                                setReceiptModal(true);
-                            }}
+                            transaction={lastTransaction} onClose={() => setShowSuccessModal(false)}
+                            onOpenReceipt={(tx) => { setSelectedTxForReceipt(tx); setReceiptModal(true); }}
                         />
                     )}
-
                     {editProductModal && (
                         <EditProductModal 
                             product={editProductModal === 'new' ? null : editProductModal}
@@ -504,155 +472,133 @@
         }
 
         function PosView({ products, cart, addToCart, updateCartQty, clearCart, cartTotal, cartItemCount, openCheckout }) {
-            const [showCartDrawer, setShowCartDrawer] = React.useState(false);
+            const [searchQuery, setSearchQuery] = React.useState('');
+            const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase().trim()));
+            const lowStockCount = products.filter(p => p.stock > 0 && p.stock <= 3).length;
 
             return (
-                <div className="p-3 space-y-4">
+                <div className="p-3 space-y-3">
+                    <div className="space-y-2">
+                        <div className="relative">
+                            <i className="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                            <input 
+                                type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="搜尋商品名稱..."
+                                className="w-full bg-white border border-slate-200 rounded-2xl pl-9 pr-8 py-2 text-xs font-bold text-slate-800 outline-none focus:border-amber-400 shadow-sm"
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs">
+                                    <i className="fa-solid fa-xmark"></i>
+                                </button>
+                            )}
+                        </div>
+                        {lowStockCount > 0 && (
+                            <div className="bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <i className="fa-solid fa-triangle-exclamation text-rose-500 animate-pulse"></i>
+                                    <span>有 {lowStockCount} 項商品庫存小於 3 件，記得補貨喔！</span>
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
                     <div>
                         <div className="flex justify-between items-center mb-2 px-1">
                             <h2 className="text-sm font-black text-slate-700 flex items-center gap-1.5">
                                 <i className="fa-solid fa-store text-amber-500"></i>
                                 點擊商品加入購物車
                             </h2>
-                            <span className="text-xs text-slate-400 font-bold">共 {products.length} 項商品</span>
+                            <span className="text-xs text-slate-400 font-bold">共 {filteredProducts.length} 項</span>
                         </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                            {products.map(product => {
-                                const isOut = product.stock <= 0;
-                                const inCart = cart.find(i => i.id === product.id);
-                                const cartQty = inCart ? inCart.qty : 0;
-
-                                return (
-                                    <button
-                                        key={product.id}
-                                        onClick={() => addToCart(product)}
-                                        disabled={isOut}
-                                        className={`p-3 rounded-2xl border text-left relative flex flex-col justify-between transition-all active:scale-95 shadow-sm ${
-                                            isOut 
-                                                ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed' 
-                                                : 'bg-white border-slate-200 hover:border-amber-400 hover:shadow-md'
-                                        }`}
-                                    >
-                                        {cartQty > 0 && (
-                                            <span className="absolute -top-2 -right-2 bg-rose-500 text-white font-black text-xs px-2 py-0.5 rounded-full shadow-md z-10 animate-bounce">
-                                                +{cartQty}
-                                            </span>
-                                        )}
-
-                                        <div className="flex items-center justify-center h-20 mb-2 rounded-xl bg-slate-50 relative overflow-hidden">
-                                            {product.image ? (
-                                                <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-xl" />
-                                            ) : (
-                                                <span className="text-4xl">{product.icon || '🎨'}</span>
-                                            )}
-                                            {isOut && (
-                                                <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center">
-                                                    <span className="text-white font-black text-xs bg-rose-600 px-2 py-1 rounded-md">完售</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <h3 className="font-bold text-xs text-slate-800 line-clamp-1">{product.name}</h3>
-                                            <div className="flex justify-between items-center mt-1">
-                                                <span className="font-extrabold text-amber-600 text-sm">${product.price}</span>
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                                    product.stock < 5 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'
-                                                }`}>
-                                                    剩 {product.stock}
+                        {filteredProducts.length === 0 ? (
+                            <div className="bg-white p-8 rounded-2xl text-center border border-slate-200 text-slate-400 space-y-2">
+                                <i className="fa-solid fa-box-open text-3xl text-slate-300"></i>
+                                <p className="text-xs font-bold">找不到相符的商品喔！</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                {filteredProducts.map(product => {
+                                    const isOut = product.stock <= 0;
+                                    const isLow = product.stock > 0 && product.stock <= 3;
+                                    const inCart = cart.find(i => i.id === product.id);
+                                    const cartQty = inCart ? inCart.qty : 0;
+                                    return (
+                                        <button
+                                            key={product.id} onClick={() => addToCart(product)} disabled={isOut}
+                                            className={`p-3 rounded-2xl border text-left relative flex flex-col justify-between transition-all active:scale-95 shadow-sm ${
+                                                isOut ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed' :
+                                                isLow ? 'bg-white border-rose-300 hover:border-amber-400' : 'bg-white border-slate-200 hover:border-amber-400 hover:shadow-md'
+                                            }`}
+                                        >
+                                            {cartQty > 0 && (
+                                                <span className="absolute -top-2 -right-2 bg-rose-500 text-white font-black text-xs px-2 py-0.5 rounded-full shadow-md z-10 animate-bounce">
+                                                    +{cartQty}
                                                 </span>
+                                            )}
+                                            <div className="flex items-center justify-center h-20 mb-2 rounded-xl bg-slate-50 relative overflow-hidden">
+                                                {product.image ? (
+                                                    <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-xl" />
+                                                ) : (
+                                                    <span className="text-4xl">{product.icon || '🎨'}</span>
+                                                )}
+                                                {isOut && (
+                                                    <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center">
+                                                        <span className="text-white font-black text-xs bg-rose-600 px-2 py-1 rounded-md">完售</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                            <div>
+                                                <h3 className="font-bold text-xs text-slate-800 line-clamp-1">{product.name}</h3>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <span className="font-extrabold text-amber-600 text-sm">${product.price}</span>
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                                        isOut ? 'bg-slate-200 text-slate-500' :
+                                                        isLow ? 'bg-rose-100 text-rose-600 animate-pulse' : 'bg-slate-100 text-slate-500'
+                                                    }`}>
+                                                        剩 {product.stock}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
-                    {cartItemCount > 0 && (
-                        <div className="fixed bottom-16 left-0 right-0 max-w-lg mx-auto p-3 z-20">
-                            <div className="bg-slate-900 text-white rounded-3xl p-3 shadow-2xl flex justify-between items-center border border-slate-700">
-                                <button 
-                                    onClick={() => setShowCartDrawer(!showCartDrawer)}
-                                    className="flex items-center space-x-3 px-2 active:scale-95 transition-all"
-                                >
-                                    <div className="relative">
-                                        <div className="w-10 h-10 bg-amber-400 text-slate-900 rounded-2xl flex items-center justify-center text-lg font-black shadow-md">
-                                            🛒
+                    {/* 購物車總結與結帳按鈕 */}
+                    {cart.length > 0 && (
+                        <div className="bg-slate-900 text-white p-3.5 rounded-2xl shadow-xl space-y-3 border border-slate-800">
+                            <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                                <span className="font-bold text-xs flex items-center gap-1.5">
+                                    <i className="fa-solid fa-cart-shopping text-amber-400"></i>
+                                    購物車（{cartItemCount} 件）
+                                </span>
+                                <button onClick={clearCart} className="text-[10px] text-slate-400 hover:text-rose-400 font-bold">清空</button>
+                            </div>
+                            <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
+                                {cart.map(item => (
+                                    <div key={item.id} className="flex justify-between items-center text-xs">
+                                        <span className="truncate max-w-[130px]">{item.product.name}</span>
+                                        <div className="flex items-center space-x-2">
+                                            <button onClick={() => updateCartQty(item.id, -1)} className="w-5 h-5 bg-slate-800 hover:bg-slate-700 rounded flex items-center justify-center text-amber-400 font-bold">-</button>
+                                            <span className="font-mono">{item.qty}</span>
+                                            <button onClick={() => updateCartQty(item.id, 1)} className="w-5 h-5 bg-slate-800 hover:bg-slate-700 rounded flex items-center justify-center text-amber-400 font-bold">+</button>
+                                            <span className="font-bold text-amber-400 w-10 text-right">${item.product.price * item.qty}</span>
                                         </div>
-                                        <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-extrabold w-5 h-5 rounded-full flex items-center justify-center border-2 border-slate-900">
-                                            {cartItemCount}
-                                        </span>
                                     </div>
-                                    <div className="text-left">
-                                        <div className="text-[11px] text-slate-400 font-bold flex items-center gap-1">
-                                            <span>點擊看明細</span>
-                                            <i className={`fa-solid ${showCartDrawer ? 'fa-chevron-down' : 'fa-chevron-up'} text-[10px]`}></i>
-                                        </div>
-                                        <div className="text-lg font-black text-amber-300">${cartTotal}</div>
-                                    </div>
-                                </button>
-
+                                ))}
+                            </div>
+                            <div className="flex justify-between items-center pt-2 border-t border-slate-800">
+                                <div>
+                                    <span className="text-[10px] text-slate-400 block">合計金額</span>
+                                    <span className="text-xl font-black text-amber-400">${cartTotal}</span>
+                                </div>
                                 <button 
                                     onClick={openCheckout}
-                                    className="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black px-5 py-2.5 rounded-2xl text-sm shadow-lg bounce-active flex items-center space-x-1.5"
+                                    className="bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs shadow-lg bounce-active"
                                 >
-                                    <span>前往結帳</span>
-                                    <i className="fa-solid fa-arrow-right"></i>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {showCartDrawer && cartItemCount > 0 && (
-                        <div className="fixed inset-0 bg-slate-900/50 z-10 backdrop-blur-sm flex items-end justify-center p-3">
-                            <div className="bg-white w-full max-w-lg rounded-3xl p-4 shadow-2xl space-y-3 mb-28 pop-in">
-                                <div className="flex justify-between items-center border-b pb-2">
-                                    <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
-                                        <i className="fa-solid fa-basket-shopping text-amber-500"></i>
-                                        已選購物車內容
-                                    </h3>
-                                    <button onClick={clearCart} className="text-xs text-rose-500 font-bold hover:underline">
-                                        清空購物車
-                                    </button>
-                                </div>
-
-                                <div className="space-y-2 max-h-56 overflow-y-auto">
-                                    {cart.map(item => (
-                                        <div key={item.id} className="flex justify-between items-center p-2 bg-slate-50 rounded-2xl border border-slate-100">
-                                            <div className="flex items-center space-x-2">
-                                                <span className="text-xl">{item.product.icon}</span>
-                                                <div>
-                                                    <h4 className="font-bold text-xs text-slate-800">{item.product.name}</h4>
-                                                    <span className="text-[10px] font-bold text-amber-600">${item.product.price}</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center space-x-2">
-                                                <button 
-                                                    onClick={() => updateCartQty(item.id, -1)}
-                                                    className="w-7 h-7 bg-slate-200 text-slate-700 rounded-xl font-bold flex items-center justify-center text-xs active:scale-95"
-                                                >
-                                                    -
-                                                </button>
-                                                <span className="font-black text-xs w-4 text-center">{item.qty}</span>
-                                                <button 
-                                                    onClick={() => updateCartQty(item.id, 1)}
-                                                    className="w-7 h-7 bg-amber-400 text-slate-900 rounded-xl font-bold flex items-center justify-center text-xs active:scale-95"
-                                                >
-                                                    +
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <button 
-                                    onClick={() => setShowCartDrawer(false)} 
-                                    className="w-full bg-slate-100 text-slate-600 font-bold py-2 rounded-xl text-xs"
-                                >
-                                    收起清單
+                                    前往結帳 ➔
                                 </button>
                             </div>
                         </div>
@@ -662,36 +608,27 @@
         }
 
         function InventoryView({ products, setProducts, openEditModal }) {
-            const handleStockAdjust = (id, delta) => {
-                setProducts(prev => prev.map(p => {
-                    if (p.id === id) {
-                        return { ...p, stock: Math.max(0, p.stock + delta) };
-                    }
-                    return p;
-                }));
-            };
-
             return (
-                <div className="p-4 space-y-4">
+                <div className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
                         <div>
                             <h2 className="text-base font-bold text-slate-800">商品與庫存管理</h2>
-                            <p className="text-xs text-slate-500">快速調整數量或新增市集品項</p>
+                            <p className="text-xs text-slate-500">快速調整價格、庫存與新品新增</p>
                         </div>
                         <button 
                             onClick={() => openEditModal('new')}
-                            className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold px-3.5 py-2 rounded-2xl text-xs shadow-md flex items-center gap-1.5 bounce-active"
+                            className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-md bounce-active"
                         >
-                            <i className="fa-solid fa-plus text-sm"></i>
+                            <i className="fa-solid fa-plus"></i>
                             <span>新增商品</span>
                         </button>
                     </div>
 
-                    <div className="space-y-2.5">
+                    <div className="space-y-2">
                         {products.map(product => (
                             <div key={product.id} className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden shrink-0 border">
+                                    <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
                                         {product.image ? (
                                             <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                                         ) : (
@@ -700,38 +637,22 @@
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-xs text-slate-800">{product.name}</h3>
-                                        <div className="text-[11px] font-extrabold text-amber-600 mt-0.5">${product.price}</div>
+                                        <div className="flex items-center space-x-2 mt-0.5">
+                                            <span className="text-xs font-black text-amber-600">${product.price}</span>
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                                                product.stock <= 0 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600'
+                                            }`}>
+                                                庫存: {product.stock}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div className="flex items-center space-x-3">
-                                    <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl">
-                                        <button 
-                                            onClick={() => handleStockAdjust(product.id, -1)}
-                                            className="w-6 h-6 bg-white text-slate-700 rounded-lg font-bold flex items-center justify-center text-xs shadow-sm active:scale-95"
-                                        >
-                                            -
-                                        </button>
-                                        <span className={`px-2 text-xs font-black min-w-[30px] text-center ${
-                                            product.stock === 0 ? 'text-rose-600' : 'text-slate-800'
-                                        }`}>
-                                            {product.stock}
-                                        </span>
-                                        <button 
-                                            onClick={() => handleStockAdjust(product.id, 1)}
-                                            className="w-6 h-6 bg-amber-400 text-slate-900 rounded-lg font-bold flex items-center justify-center text-xs shadow-sm active:scale-95"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
-
-                                    <button 
-                                        onClick={() => openEditModal(product)}
-                                        className="text-slate-400 hover:text-slate-600 p-1 text-sm"
-                                    >
-                                        <i className="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                </div>
+                                <button 
+                                    onClick={() => openEditModal(product)}
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs border border-slate-200"
+                                >
+                                    編輯
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -739,11 +660,16 @@
             );
         }
 
-        function StatsView({ salesHistory, products, openReceiptModal, exportCSV, clearHistory }) {
+        function StatsView({ salesHistory, products, dailyGoal, setDailyGoal, voidTransaction, openReceiptModal, exportCSV, clearHistory }) {
             const [showConfirm, setShowConfirm] = React.useState(false);
+            const [editingGoal, setEditingGoal] = React.useState(false);
+            const [tempGoal, setTempGoal] = React.useState(dailyGoal.toString());
+            const [voidingId, setVoidingId] = React.useState(null);
+
             const totalRevenue = salesHistory.reduce((s, t) => s + t.totalAmount, 0);
             const totalItemsSold = salesHistory.reduce((s, t) => s + t.items.reduce((is, i) => is + i.qty, 0), 0);
-            
+            const goalPct = Math.min(100, Math.round((totalRevenue / (dailyGoal || 1)) * 100));
+
             const cashRevenue = salesHistory.filter(t => t.paymentMethod === 'cash').reduce((s, t) => s + t.totalAmount, 0);
             const epayRevenue = totalRevenue - cashRevenue;
 
@@ -754,8 +680,7 @@
                 });
             });
 
-            const rankedItems = Object.entries(itemSalesMap)
-                .sort((a, b) => b[1] - a[1]);
+            const rankedItems = Object.entries(itemSalesMap).sort((a, b) => b[1] - a[1]);
 
             return (
                 <div className="p-4 space-y-4">
@@ -764,7 +689,6 @@
                             <h2 className="text-base font-bold text-slate-800">營業小結與業績</h2>
                             <p className="text-xs text-slate-500">今日擺攤成果統計分析</p>
                         </div>
-
                         <button 
                             onClick={() => openReceiptModal(null)}
                             className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-3.5 py-2 rounded-2xl text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
@@ -774,13 +698,57 @@
                         </button>
                     </div>
 
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                        <div className="flex justify-between items-center">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-lg">🎯</span>
+                                <div>
+                                    <h3 className="font-extrabold text-xs text-slate-800">今日擺攤目標達成率</h3>
+                                    <p className="text-[10px] text-slate-400">目標金額: ${dailyGoal}</p>
+                                </div>
+                            </div>
+                            {!editingGoal ? (
+                                <button 
+                                    onClick={() => { setTempGoal(dailyGoal.toString()); setEditingGoal(true); }}
+                                    className="text-[10px] text-amber-600 bg-amber-50 hover:bg-amber-100 font-bold px-2 py-1 rounded-lg border border-amber-200"
+                                >
+                                    設定目標
+                                </button>
+                            ) : (
+                                <div className="flex items-center space-x-1">
+                                    <input 
+                                        type="number" value={tempGoal} onChange={(e) => setTempGoal(e.target.value)}
+                                        className="w-16 p-1 border rounded text-xs font-bold outline-none text-center"
+                                    />
+                                    <button 
+                                        onClick={() => { setDailyGoal(Number(tempGoal) || 500); setEditingGoal(false); }}
+                                        className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded"
+                                    >
+                                        確定
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="space-y-1">
+                            <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5 border">
+                                <div 
+                                    className="bg-gradient-to-r from-amber-400 to-emerald-400 h-full rounded-full transition-all duration-500"
+                                    style={{ width: `${goalPct}%` }}
+                                ></div>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                                <span>目前：${totalRevenue} ({goalPct}%)</span>
+                                <span>{goalPct >= 100 ? '🎉 已達標！太棒了！' : `還差 $${Math.max(0, dailyGoal - totalRevenue)}`}</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                         <div className="bg-gradient-to-br from-amber-400 to-orange-500 p-3.5 rounded-2xl text-white shadow-md">
                             <span className="text-xs text-amber-100 font-bold block">總營業額</span>
                             <span className="text-2xl font-black">${totalRevenue}</span>
                             <span className="text-[10px] block text-amber-100/80 mt-1">共 {salesHistory.length} 筆交易</span>
                         </div>
-
                         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-3.5 rounded-2xl text-white shadow-md">
                             <span className="text-xs text-indigo-100 font-bold block">總售出數量</span>
                             <span className="text-2xl font-black">{totalItemsSold} <span className="text-xs font-normal">件</span></span>
@@ -797,12 +765,9 @@
                             </div>
                         </div>
                         <button 
-                            onClick={exportCSV}
-                            disabled={salesHistory.length === 0}
+                            onClick={exportCSV} disabled={salesHistory.length === 0}
                             className={`px-3 py-1.5 rounded-xl text-xs font-extrabold shadow-sm ${
-                                salesHistory.length > 0 
-                                    ? 'bg-emerald-600 text-white active:scale-95' 
-                                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                salesHistory.length > 0 ? 'bg-emerald-600 text-white active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                             }`}
                         >
                             下載 CSV
@@ -831,7 +796,6 @@
                         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                             <i className="fa-solid fa-trophy text-amber-400"></i> 熱銷商品排行榜
                         </h3>
-
                         {rankedItems.length === 0 ? (
                             <p className="text-xs text-slate-400 text-center py-4">目前還沒有銷售紀錄喔！加油！</p>
                         ) : (
@@ -873,18 +837,21 @@
                             )}
                         </div>
 
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                        <div className="space-y-2 max-h-56 overflow-y-auto">
                             {salesHistory.map(tx => (
                                 <div key={tx.id} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-xs flex justify-between items-center">
-                                    <div>
-                                        <div className="font-bold text-slate-800">
-                                            {tx.items.map(i => `${i.name}x${i.qty}`).join(', ')}
+                                    <div className="flex-1 pr-2">
+                                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                                            <span className="text-[10px] font-mono bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">{tx.seqNo || tx.id.slice(-6)}</span>
+                                            <span className="truncate">{tx.items.map(i => `${i.name}x${i.qty}`).join(', ')}</span>
                                         </div>
-                                        <div className="text-[10px] text-slate-400 mt-0.5">
-                                            {new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {tx.paymentName}
+                                        <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
+                                            <span>{new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {tx.paymentName}</span>
+                                            {tx.discountAmount > 0 && <span className="text-rose-500 font-bold">已折 ${tx.discountAmount}</span>}
                                         </div>
                                     </div>
-                                    <div className="flex items-center space-x-2">
+
+                                    <div className="flex items-center space-x-1.5">
                                         <span className="font-black text-amber-600 text-sm">${tx.totalAmount}</span>
                                         <button 
                                             onClick={() => openReceiptModal(tx)}
@@ -894,6 +861,21 @@
                                             <i className="fa-solid fa-receipt text-amber-600"></i>
                                             <span>小票</span>
                                         </button>
+
+                                        {voidingId !== tx.id ? (
+                                            <button 
+                                                onClick={() => setVoidingId(tx.id)}
+                                                title="撤銷退款此單"
+                                                className="bg-slate-200 hover:bg-rose-100 text-slate-600 hover:text-rose-600 font-bold p-1 rounded-lg text-[10px] transition-all shrink-0"
+                                            >
+                                                <i className="fa-solid fa-rotate-left"></i>
+                                            </button>
+                                        ) : (
+                                            <div className="flex items-center gap-1 bg-rose-50 border border-rose-200 p-0.5 rounded">
+                                                <button onClick={() => { voidTransaction(tx.id); setVoidingId(null); }} className="text-[9px] bg-rose-600 text-white font-bold px-1 rounded">撤銷</button>
+                                                <button onClick={() => setVoidingId(null)} className="text-[9px] bg-slate-200 text-slate-700 font-bold px-1 rounded">X</button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -903,9 +885,402 @@
             );
         }
 
+        function SettingsView({ shopName, setShopName, paymentMethods, setPaymentMethods, printerSettings, setPrinterSettings, printSpeed, setPrintSpeed, exportBackup, importBackup, resetDemoData }) {
+            const [showResetConfirm, setShowResetConfirm] = React.useState(false);
+            const [activePayTab, setActivePayTab] = React.useState(paymentMethods[0]?.id || 'pay_mpay');
+            const [settingTab, setSettingTab] = React.useState('shop');
+
+            const selectedPayMethod = paymentMethods.find(m => m.id === activePayTab) || paymentMethods[0];
+
+            return (
+                <div className="p-4 space-y-4">
+                    <div>
+                        <h2 className="text-base font-bold text-slate-800">系統設定</h2>
+                        <p className="text-xs text-slate-500">點擊分頁標籤切換管理項目</p>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1 bg-slate-200 p-1 rounded-2xl shadow-inner text-[11px] font-bold">
+                        <button
+                            onClick={() => setSettingTab('shop')}
+                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                                settingTab === 'shop' ? 'bg-white text-slate-900 shadow-md font-black' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <i className="fa-solid fa-store text-amber-500"></i>
+                            <span className="truncate">攤位資料</span>
+                        </button>
+
+                        <button
+                            onClick={() => setSettingTab('printer')}
+                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                                settingTab === 'printer' ? 'bg-white text-slate-900 shadow-md font-black' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <i className="fa-solid fa-print text-amber-500"></i>
+                            <span className="truncate">小票打印</span>
+                        </button>
+
+                        <button
+                            onClick={() => setSettingTab('payments')}
+                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                                settingTab === 'payments' ? 'bg-white text-slate-900 shadow-md font-black' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <i className="fa-solid fa-qrcode text-sky-500"></i>
+                            <span className="truncate">收款 QR</span>
+                        </button>
+
+                        <button
+                            onClick={() => setSettingTab('data')}
+                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
+                                settingTab === 'data' ? 'bg-white text-slate-900 shadow-md font-black' : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <i className="fa-solid fa-sliders text-rose-500"></i>
+                            <span className="truncate">資料維護</span>
+                        </button>
+                    </div>
+
+                    {settingTab === 'shop' && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 pop-in">
+                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                                <i className="fa-solid fa-store text-amber-500 text-sm"></i>
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">攤位基本資料</h3>
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-500 block mb-1">攤位 / 店舖名稱：</label>
+                                <input 
+                                    type="text" value={shopName} onChange={(e) => setShopName(e.target.value)}
+                                    placeholder="例如: 小晴的手作品牌"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-extrabold outline-none focus:border-amber-400"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div>
+                                    <label className="font-bold text-slate-500 block mb-1">攤位編號 / 位置：</label>
+                                    <input 
+                                        type="text" value={printerSettings.stallNo}
+                                        onChange={(e) => setPrinterSettings({ ...printerSettings, stallNo: e.target.value })}
+                                        placeholder="例如: 攤位 A-08"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="font-bold text-slate-500 block mb-1">IG / 社群帳號：</label>
+                                    <input 
+                                        type="text" value={printerSettings.socialAccount}
+                                        onChange={(e) => setPrinterSettings({ ...printerSettings, socialAccount: e.target.value })}
+                                        placeholder="例如: @kids_craft"
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-1">攤位標語 / 品牌口號：</label>
+                                <input 
+                                    type="text" value={printerSettings.slogan}
+                                    onChange={(e) => setPrinterSettings({ ...printerSettings, slogan: e.target.value })}
+                                    placeholder="例如: 純手工打造，帶走一份小幸運"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {settingTab === 'printer' && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4 pop-in">
+                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                                <i className="fa-solid fa-print text-amber-500 text-sm"></i>
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">小票打印機與樣式設定</h3>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">小票紙張寬度：</label>
+                                    <div className="grid grid-cols-2 gap-1">
+                                        <button 
+                                            type="button" onClick={() => setPrinterSettings({ ...printerSettings, paperWidth: '58mm' })}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                (printerSettings.paperWidth || '58mm') === '58mm' ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            58mm 標準
+                                        </button>
+                                        <button 
+                                            type="button" onClick={() => setPrinterSettings({ ...printerSettings, paperWidth: '80mm' })}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                printerSettings.paperWidth === '80mm' ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            80mm 寬版
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 block mb-1">小票紙張質感：</label>
+                                    <div className="grid grid-cols-2 gap-1">
+                                        <button 
+                                            type="button" onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'warm' })}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                printerSettings.paperTheme === 'warm' ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            復古米黃
+                                        </button>
+                                        <button 
+                                            type="button" onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'pure' })}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                printerSettings.paperTheme === 'pure' ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            純白熱敏
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 block mb-1">頁尾感謝語 / 優惠標語：</label>
+                                <input 
+                                    type="text" value={printerSettings.thanksMsg}
+                                    onChange={(e) => setPrinterSettings({ ...printerSettings, thanksMsg: e.target.value })}
+                                    placeholder="例如: 感謝支持小老闆的手作夢想！"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
+                                />
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-slate-100">
+                                <div className="flex justify-between items-center text-xs">
+                                    <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
+                                        <input 
+                                            type="checkbox" checked={printerSettings.showSignature}
+                                            onChange={(e) => setPrinterSettings({ ...printerSettings, showSignature: e.target.checked })}
+                                            className="accent-amber-500 rounded w-4 h-4"
+                                        />
+                                        <span>顯示小老闆簽名欄</span>
+                                    </label>
+
+                                    <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
+                                        <input 
+                                            type="checkbox" checked={printerSettings.showSocialQr}
+                                            onChange={(e) => setPrinterSettings({ ...printerSettings, showSocialQr: e.target.checked })}
+                                            className="accent-amber-500 rounded w-4 h-4"
+                                        />
+                                        <span>顯示社群追蹤 QR</span>
+                                    </label>
+                                </div>
+
+                                {printerSettings.showSocialQr && (
+                                    <div className="space-y-2 pt-2 border-t border-slate-100">
+                                        <label className="text-xs font-bold text-slate-700 block">社群追蹤 QR Code 圖片：</label>
+                                        {printerSettings.socialQrImage ? (
+                                            <div className="flex items-center space-x-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                                                <img src={printerSettings.socialQrImage} alt="社群 QR" className="w-16 h-16 object-contain rounded border bg-white shrink-0" />
+                                                <div className="flex-1 space-y-1">
+                                                    <p className="text-xs text-slate-800 font-bold">已設定社群 QR Code</p>
+                                                    <button 
+                                                        type="button" onClick={() => setPrinterSettings({ ...printerSettings, socialQrImage: '' })}
+                                                        className="text-xs text-rose-500 font-bold hover:underline"
+                                                    >
+                                                        移除並重新上傳
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <label className="flex items-center justify-center gap-2 p-3 bg-slate-50 border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl cursor-pointer transition-colors text-xs font-bold text-slate-600">
+                                                <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-base"></i>
+                                                <span>上傳 IG / FB 追蹤 QR Code 圖片</span>
+                                                <input 
+                                                    type="file" accept="image/*" className="hidden"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files && e.target.files[0];
+                                                        if (file) {
+                                                            const reader = new FileReader();
+                                                            reader.onload = (ev) => {
+                                                                setPrinterSettings({ ...printerSettings, socialQrImage: ev.target.result });
+                                                            };
+                                                            reader.readAsDataURL(file);
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-slate-100">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                        <i className="fa-solid fa-gauge-high text-amber-500"></i>
+                                        出紙列印動畫速度：
+                                    </span>
+                                    <span className="text-xs font-mono font-bold text-amber-600">
+                                        {printSpeed === '0' ? '關閉動畫' : `${printSpeed} 秒`}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-1.5 text-xs">
+                                    {[
+                                        { label: '快速 (1.5s)', val: '1.5' },
+                                        { label: '標準 (4.5s)', val: '4.5' },
+                                        { label: '擬真 (7s)', val: '7.0' },
+                                        { label: '無動畫', val: '0' }
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.val} type="button" onClick={() => setPrintSpeed(opt.val)}
+                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
+                                                printSpeed === opt.val ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {settingTab === 'payments' && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4 pop-in">
+                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                                <i className="fa-solid fa-qrcode text-sky-500 text-sm"></i>
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">電子支付收款圖碼</h3>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                                {paymentMethods.map(m => (
+                                    <button
+                                        key={m.id} onClick={() => setActivePayTab(m.id)}
+                                        className={`py-1.5 px-1 rounded-lg text-[10px] font-bold truncate transition-all flex items-center justify-center gap-1 ${
+                                            activePayTab === m.id ? 'bg-white text-slate-900 shadow-sm font-black' : 'text-slate-500'
+                                        }`}
+                                    >
+                                        <span className="truncate">{m.name.split(' ')[0]}</span>
+                                        {m.qr && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {selectedPayMethod && (
+                                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="font-bold text-xs text-slate-800 flex items-center gap-2">
+                                            <i className={`fa-solid ${selectedPayMethod.icon} text-sky-500`}></i>
+                                            {selectedPayMethod.name} 收款碼
+                                        </h4>
+                                        {selectedPayMethod.qr && (
+                                            <button 
+                                                onClick={() => setPaymentMethods(paymentMethods.map(m => m.id === selectedPayMethod.id ? { ...m, qr: '' } : m))}
+                                                className="text-[10px] text-rose-500 font-bold hover:underline"
+                                            >
+                                                移除圖碼
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {selectedPayMethod.qr ? (
+                                        <div className="text-center space-y-2">
+                                            <div className="bg-white p-2 rounded-xl shadow-inner border inline-block">
+                                                <img src={selectedPayMethod.qr} alt={selectedPayMethod.name} className="w-36 h-36 object-contain mx-auto" />
+                                            </div>
+                                            <p className="text-[10px] text-emerald-600 font-bold">✓ 已設定收款圖碼，顧客結帳時將會自動展示</p>
+                                        </div>
+                                    ) : (
+                                        <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-2xl bg-white cursor-pointer space-y-1.5 transition-colors">
+                                            <i className="fa-solid fa-qrcode text-slate-300 text-3xl"></i>
+                                            <span className="text-xs font-bold text-slate-600">點擊上傳 {selectedPayMethod.name} QR Code 圖片</span>
+                                            <span className="text-[10px] text-slate-400">支援手機截圖或照片檔案</span>
+                                            <input 
+                                                type="file" accept="image/*" className="hidden"
+                                                onChange={(e) => {
+                                                    const file = e.target.files && e.target.files[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onload = (ev) => {
+                                                            setPaymentMethods(paymentMethods.map(m => m.id === selectedPayMethod.id ? { ...m, qr: ev.target.result } : m));
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {settingTab === 'data' && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4 pop-in">
+                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
+                                <i className="fa-solid fa-database text-sky-500 text-sm"></i>
+                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">全站資料備份與轉移</h3>
+                            </div>
+
+                            <p className="text-xs text-slate-500">家長可以在自己的手機設定好商品與收款 QR 後，將資料匯出成 JSON 備份檔，再匯入給小朋友的手機使用！</p>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <button 
+                                    onClick={exportBackup}
+                                    className="bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-900 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                                >
+                                    <i className="fa-solid fa-file-export text-sky-600"></i>
+                                    <span>匯出全站 JSON 備份</span>
+                                </button>
+
+                                <label className="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer text-center">
+                                    <i className="fa-solid fa-file-import text-emerald-600"></i>
+                                    <span>匯入 JSON 復原</span>
+                                    <input type="file" accept=".json" className="hidden" onChange={importBackup} />
+                                </label>
+                            </div>
+
+                            <div className="border-t border-slate-100 pt-3 space-y-3">
+                                <div className="flex items-center space-x-2">
+                                    <i className="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
+                                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">重置為預設狀態</h3>
+                                </div>
+
+                                {!showResetConfirm ? (
+                                    <button 
+                                        onClick={() => setShowResetConfirm(true)}
+                                        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition-colors border border-slate-200 flex items-center justify-center gap-1.5"
+                                    >
+                                        <i className="fa-solid fa-rotate-left text-slate-500"></i>
+                                        <span>重置所有資料與範例商品</span>
+                                    </button>
+                                ) : (
+                                    <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl text-center space-y-2">
+                                        <p className="text-xs font-bold text-rose-700">確定重置為預設資料？所有商品與銷售紀錄將被清除。</p>
+                                        <div className="flex gap-2 justify-center pt-1">
+                                            <button 
+                                                onClick={() => { resetDemoData(); setShowResetConfirm(false); }}
+                                                className="bg-rose-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs shadow-sm"
+                                            >
+                                                確認重置
+                                            </button>
+                                            <button 
+                                                onClick={() => setShowResetConfirm(false)}
+                                                className="bg-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl text-xs"
+                                            >
+                                                取消
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         function ReceiptModal({ shopName, salesHistory, transaction, printerSettings, printSpeed, onClose }) {
             const isSingle = Boolean(transaction);
-
             const totalRevenue = isSingle ? transaction.totalAmount : salesHistory.reduce((s, t) => s + t.totalAmount, 0);
             const totalItemsSold = isSingle 
                 ? transaction.items.reduce((s, i) => s + i.qty, 0)
@@ -914,7 +1289,7 @@
             const cashRevenue = salesHistory.filter(t => t.paymentMethod === 'cash').reduce((s, t) => s + t.totalAmount, 0);
             const epayRevenue = totalRevenue - cashRevenue;
 
-            const [animKey, setAnimKey] = React.useState(0);
+            const [animKey] = React.useState(0);
             const [isPrinting, setIsPrinting] = React.useState(false);
             const [printProgress, setPrintProgress] = React.useState(100);
 
@@ -974,7 +1349,7 @@
                     backgroundColor: printerSettings.paperTheme === 'pure' ? '#FFFFFF' : '#FFFDF7'
                 }).then(canvas => {
                     const link = document.createElement('a');
-                    const filePrefix = isSingle ? `單筆交易明細_${transaction.id.slice(-6)}` : '營業統計小票';
+                    const filePrefix = isSingle ? `單筆交易明細_${(transaction.seqNo || transaction.id).replace('#', '')}` : '營業統計小票';
                     link.download = `${shopName}_${filePrefix}_${new Date().toISOString().slice(0, 10)}.jpg`;
                     link.href = canvas.toDataURL('image/jpeg', 0.92);
                     link.click();
@@ -986,8 +1361,6 @@
             return (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 z-50 pop-in overflow-y-auto">
                     <div className="bg-slate-900 w-full max-w-sm rounded-3xl p-4 border border-slate-800 shadow-2xl space-y-3 my-auto max-h-[96vh] flex flex-col text-white">
-                        
-                        {/* 視窗頂部標題 */}
                         <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                             <h3 className="font-black text-sm text-slate-100 flex items-center gap-2">
                                 <i className="fa-solid fa-receipt text-amber-400"></i>
@@ -998,7 +1371,6 @@
                             </button>
                         </div>
 
-                        {/* 微型切口印表機頂部機身 */}
                         <div className="space-y-0">
                             <div className="bg-gradient-to-b from-slate-800 to-slate-900 rounded-t-2xl p-3 pb-2 shadow-lg border border-slate-700 relative z-20">
                                 <div className="flex justify-between items-center pb-2 text-[10px] text-slate-400 font-mono font-bold">
@@ -1014,8 +1386,6 @@
                                         )}
                                     </span>
                                 </div>
-
-                                {/* 機身狹縫與鋸齒切刀 */}
                                 <div className="relative z-30">
                                     <div className="h-1 w-11/12 mx-auto cutter-blade-teeth rounded-t opacity-90"></div>
                                     <div className="bg-black h-3 w-full rounded-sm shadow-[inset_0_2px_6px_rgba(0,0,0,1)] border-t border-slate-800 flex justify-center items-center">
@@ -1024,14 +1394,12 @@
                                 </div>
                             </div>
 
-                            {/* 懸空吐紙展示區域 */}
                             <div className="overflow-y-auto no-scrollbar max-h-[50vh] pt-1 pb-6 px-1 flex justify-center relative z-10 bg-slate-950/60 rounded-b-2xl border-x border-b border-slate-800/80 shadow-inner">
                                 <div 
                                     key={animKey}
                                     className="animate-real-print-feed transition-all w-full"
                                     style={parseFloat(printSpeed) > 0 ? { animationDuration: `${printSpeed}s` } : { animation: 'none' }}
                                 >
-                                    {/* 熱敏紙張 */}
                                     <div 
                                         id="printable-receipt" 
                                         className={`font-receipt p-4 text-slate-800 shadow-[0_12px_28px_rgba(0,0,0,0.6)] space-y-3 relative rounded-t-sm mx-auto transition-all ${
@@ -1056,16 +1424,28 @@
                                         {isSingle ? (
                                             <div className="space-y-1 py-1 border-b border-dashed border-slate-400 font-mono">
                                                 <div className="flex justify-between text-[10px] text-slate-600">
-                                                    <span>單號：#{transaction.id.slice(-6)}</span>
+                                                    <span>單號：{transaction.seqNo || '#' + transaction.id.slice(-6)}</span>
                                                     <span>支付：<strong>{transaction.paymentName}</strong></span>
                                                 </div>
+                                                {transaction.discountAmount > 0 && (
+                                                    <div className="flex justify-between text-[10px] text-rose-600 font-bold">
+                                                        <span>原價金額：</span>
+                                                        <span>${transaction.subtotal || (transaction.totalAmount + transaction.discountAmount)}</span>
+                                                    </div>
+                                                )}
+                                                {transaction.discountAmount > 0 && (
+                                                    <div className="flex justify-between text-[10px] text-rose-600 font-bold">
+                                                        <span>促銷折扣：</span>
+                                                        <span>-${transaction.discountAmount}</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-between font-bold pt-1">
-                                                    <span>本次消費金額：</span>
+                                                    <span>實收金額：</span>
                                                     <span className="text-sm font-black">${transaction.totalAmount}</span>
                                                 </div>
                                                 {transaction.paymentMethod === 'cash' && (
                                                     <div className="flex justify-between text-[10px] text-slate-600">
-                                                        <span>顧客給付 / 找零：</span>
+                                                        <span>給付 / 找零：</span>
                                                         <span>${transaction.cashReceived} / ${transaction.change}</span>
                                                     </div>
                                                 )}
@@ -1110,15 +1490,10 @@
 
                                         <div className="pt-3 border-t-2 border-slate-800 text-center space-y-2">
                                             <p className="text-[10px] font-bold">{printerSettings.thanksMsg || '感謝支持小老闆的手作夢想！🎉'}</p>
-
                                             {printerSettings.showSocialQr && (
                                                 <div className="pt-1 flex flex-col items-center justify-center">
                                                     {printerSettings.socialQrImage ? (
-                                                        <img 
-                                                            src={printerSettings.socialQrImage} 
-                                                            alt="社群 QR Code" 
-                                                            className="w-20 h-20 object-contain p-1 border border-slate-300 rounded bg-white shadow-sm" 
-                                                        />
+                                                        <img src={printerSettings.socialQrImage} alt="社群 QR Code" className="w-20 h-20 object-contain p-1 border border-slate-300 rounded bg-white shadow-sm" />
                                                     ) : (
                                                         <div className="w-16 h-16 bg-slate-900 p-1 rounded flex items-center justify-center">
                                                             <div className="w-full h-full border border-white flex flex-col justify-between p-0.5">
@@ -1133,7 +1508,6 @@
                                                     )}
                                                 </div>
                                             )}
-
                                             {printerSettings.showSignature && (
                                                 <div className="pt-2 flex justify-between items-end text-[10px] text-slate-500 font-sans">
                                                     <span>小老闆簽名：___________</span>
@@ -1142,14 +1516,12 @@
                                             )}
                                         </div>
 
-                                        {/* 底部撕紙鋸齒效果 */}
                                         <div className={`absolute -bottom-2 left-0 right-0 h-2 ${printerSettings.paperTheme === 'pure' ? 'receipt-tear-edge-pure' : 'receipt-tear-edge'}`}></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 操作按鈕 */}
                         <div className="pt-1">
                             <button 
                                 onClick={downloadJPG}
@@ -1164,67 +1536,11 @@
             );
         }
 
-        function SuccessModal({ transaction, onClose, onOpenReceipt }) {
-            return (
-                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in">
-                    <div className="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center space-y-4">
-                        <div className="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner">
-                            🎉
-                        </div>
-
-                        <div>
-                            <h3 className="font-black text-lg text-slate-800">交易成功！</h3>
-                            <p className="text-xs text-slate-500 font-bold mt-1">太棒了！又成功賣出一單！</p>
-                        </div>
-
-                        <div className="bg-slate-50 p-3 rounded-2xl border space-y-1 text-xs">
-                            <div className="flex justify-between text-slate-600">
-                                <span>付款方式：</span>
-                                <span className="font-bold text-slate-800">{transaction.paymentName}</span>
-                            </div>
-                            <div className="flex justify-between text-slate-600">
-                                <span>交易總額：</span>
-                                <span className="font-extrabold text-amber-600">${transaction.totalAmount}</span>
-                            </div>
-                            {transaction.paymentMethod === 'cash' && (
-                                <div className="flex justify-between text-slate-600 pt-1 border-t">
-                                    <span>找零金額：</span>
-                                    <span className="font-extrabold text-emerald-600">${transaction.change}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            {onOpenReceipt && (
-                                <button 
-                                    onClick={() => {
-                                        onClose();
-                                        onOpenReceipt(transaction);
-                                    }}
-                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-black py-2.5 rounded-2xl text-xs flex items-center justify-center gap-1.5 border border-slate-200 active:scale-95 transition-all"
-                                >
-                                    <i className="fa-solid fa-receipt text-amber-500"></i>
-                                    <span>列印 / 下載此單小票</span>
-                                </button>
-                            )}
-
-                            <button 
-                                onClick={onClose}
-                                className="w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-black py-3 rounded-2xl text-xs shadow-md bounce-active"
-                            >
-                                繼續下一筆收銀
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        function CheckoutModal({ cart, cartTotal, paymentMethods, payMethod, setPayMethod, cashReceived, setCashReceived, onClose, onConfirm }) {
+        function CheckoutModal({ cart, cartTotal, discount, setDiscount, paymentMethods, payMethod, setPayMethod, cashReceived, setCashReceived, onClose, onConfirm }) {
+            const finalPayable = Math.max(0, cartTotal - discount);
             const numCash = parseFloat(cashReceived) || 0;
-            const change = Math.max(0, numCash - cartTotal);
+            const change = Math.max(0, numCash - finalPayable);
             const selectedPayObj = paymentMethods.find(m => m.id === payMethod);
-
             const quickBills = [10, 20, 50, 100, 500];
 
             return (
@@ -1240,9 +1556,36 @@
                             </button>
                         </div>
 
-                        <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-4 rounded-2xl text-white text-center shadow-md">
-                            <span className="text-xs font-bold text-amber-100 block">應收金額</span>
-                            <span className="text-3xl font-black">${cartTotal}</span>
+                        <div className="bg-gradient-to-r from-amber-400 to-orange-400 p-4 rounded-2xl text-white text-center shadow-md space-y-1">
+                            <span className="text-xs font-bold text-amber-100 block">實收金額</span>
+                            <div className="flex items-baseline justify-center space-x-2">
+                                <span className="text-3xl font-black">${finalPayable}</span>
+                                {discount > 0 && (
+                                    <span className="text-xs line-through text-amber-200">原價 ${cartTotal}</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                            <label className="text-[11px] font-bold text-slate-600 block">🏷️ 促銷折扣優惠：</label>
+                            <div className="grid grid-cols-5 gap-1 text-xs">
+                                {[
+                                    { label: '無折扣', val: 0 },
+                                    { label: '-$5', val: 5 },
+                                    { label: '-$10', val: 10 },
+                                    { label: '9折', val: Math.round(cartTotal * 0.1) },
+                                    { label: '85折', val: Math.round(cartTotal * 0.15) }
+                                ].map(opt => (
+                                    <button
+                                        key={opt.label} type="button" onClick={() => setDiscount(opt.val)}
+                                        className={`py-1.5 rounded-xl font-bold text-[10px] transition-all border ${
+                                            discount === opt.val ? 'bg-rose-500 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="space-y-2">
@@ -1251,23 +1594,17 @@
                                 <button 
                                     onClick={() => setPayMethod('cash')}
                                     className={`p-3 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-2 transition-all ${
-                                        payMethod === 'cash' 
-                                            ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm' 
-                                            : 'bg-slate-50 border-slate-200 text-slate-600'
+                                        payMethod === 'cash' ? 'bg-amber-100 border-amber-400 text-amber-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
                                     }`}
                                 >
                                     <i className="fa-solid fa-money-bill-wave text-emerald-500 text-base"></i>
                                     <span>現金支付</span>
                                 </button>
-
                                 {paymentMethods.map(m => (
                                     <button 
-                                        key={m.id}
-                                        onClick={() => setPayMethod(m.id)}
+                                        key={m.id} onClick={() => setPayMethod(m.id)}
                                         className={`p-2.5 rounded-2xl border font-bold text-xs flex items-center justify-center space-x-1.5 transition-all ${
-                                            payMethod === m.id 
-                                                ? 'bg-sky-100 border-sky-400 text-sky-900 shadow-sm' 
-                                                : 'bg-slate-50 border-slate-200 text-slate-600'
+                                            payMethod === m.id ? 'bg-sky-100 border-sky-400 text-sky-900 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600'
                                         }`}
                                     >
                                         <i className={`fa-solid ${m.icon} text-sm`}></i>
@@ -1284,37 +1621,32 @@
                                     <div className="relative">
                                         <span className="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
                                         <input 
-                                            type="number" 
-                                            value={cashReceived}
-                                            onChange={(e) => setCashReceived(e.target.value)}
-                                            placeholder={cartTotal.toString()}
+                                            type="number" value={cashReceived} onChange={(e) => setCashReceived(e.target.value)}
+                                            placeholder={finalPayable.toString()}
                                             className="w-full pl-7 pr-3 py-2 border rounded-xl font-black text-lg outline-none focus:border-amber-400 bg-white"
                                         />
                                     </div>
                                 </div>
-
                                 <div className="flex flex-wrap gap-1.5">
                                     <button 
-                                        onClick={() => setCashReceived(cartTotal.toString())} 
+                                        onClick={() => setCashReceived(finalPayable.toString())} 
                                         className="bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold px-2.5 py-1 rounded-lg text-xs"
                                     >
-                                        剛好 ${cartTotal}
+                                        剛好 ${finalPayable}
                                     </button>
                                     {quickBills.map(b => (
                                         <button 
-                                            key={b}
-                                            onClick={() => setCashReceived(b.toString())}
+                                            key={b} onClick={() => setCashReceived(b.toString())}
                                             className="bg-white border text-slate-700 font-bold px-2 py-1 rounded-lg text-xs hover:bg-slate-100"
                                         >
                                             ${b}
                                         </button>
                                     ))}
                                 </div>
-
                                 <div className="bg-white p-3 rounded-xl border flex justify-between items-center">
                                     <span className="text-xs font-bold text-slate-600">應找金額：</span>
                                     <span className={`text-xl font-black ${change < 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
-                                        ${numCash >= cartTotal ? change : 0}
+                                        ${numCash >= finalPayable ? change : 0}
                                     </span>
                                 </div>
                             </div>
@@ -1324,7 +1656,6 @@
                                     <i className="fa-solid fa-qrcode text-sky-500"></i>
                                     請展示下方 {selectedPayObj?.name} QR Code 給顧客掃碼
                                 </h4>
-
                                 {selectedPayObj?.qr ? (
                                     <div className="bg-white p-3 rounded-2xl shadow-inner inline-block border border-slate-200">
                                         <img src={selectedPayObj.qr} alt={selectedPayObj.name} className="w-44 h-44 object-contain mx-auto" />
@@ -1336,9 +1667,8 @@
                                         <p className="text-[10px] text-amber-600">可以在「系統設定」分頁中上傳！</p>
                                     </div>
                                 )}
-
                                 <p className="text-[11px] font-bold text-slate-500">
-                                    確認收到 <span className="text-amber-600 font-black text-sm">${cartTotal}</span> 後請點擊下方確認按鈕。
+                                    確認收到 <span className="text-amber-600 font-black text-sm">${finalPayable}</span> 後請點擊下方確認按鈕。
                                 </p>
                             </div>
                         )}
@@ -1355,798 +1685,162 @@
             );
         }
 
+        function SuccessModal({ transaction, onClose, onOpenReceipt }) {
+            return (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in">
+                    <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-4">
+                        <div className="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto animate-bounce">
+                            🎉
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-800">交易成功！銷售完成</h3>
+                            <p className="text-xs text-slate-400 mt-1">單號：{transaction.seqNo} • 已自動更新商品庫存</p>
+                        </div>
+
+                        <div className="bg-slate-50 p-3 rounded-2xl text-xs font-bold text-slate-700 border space-y-1">
+                            <div className="flex justify-between">
+                                <span>實收金額：</span>
+                                <span className="text-amber-600 font-black">${transaction.totalAmount}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-500 text-[11px]">
+                                <span>付款方式：</span>
+                                <span>{transaction.paymentName}</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <button 
+                                onClick={() => { onClose(); onOpenReceipt(transaction); }}
+                                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-extrabold py-3 rounded-2xl text-xs shadow-md bounce-active flex items-center justify-center gap-2"
+                            >
+                                <i className="fa-solid fa-receipt text-sm"></i>
+                                <span>列印 / 下載此單小票</span>
+                            </button>
+                            <button 
+                                onClick={onClose}
+                                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-2xl text-xs"
+                            >
+                                回收銀台繼續販售
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         function EditProductModal({ product, onClose, onSave, onDelete }) {
             const [name, setName] = React.useState(product?.name || '');
             const [price, setPrice] = React.useState(product?.price || 10);
             const [stock, setStock] = React.useState(product?.stock || 10);
             const [icon, setIcon] = React.useState(product?.icon || '🎨');
             const [image, setImage] = React.useState(product?.image || '');
-            const [showCamera, setShowCamera] = React.useState(false);
-            const [cameraLoading, setCameraLoading] = React.useState(false);
-            const [cameraError, setCameraError] = React.useState(null);
-            const [formError, setFormError] = React.useState('');
-
-            const videoRef = React.useRef(null);
-            const streamRef = React.useRef(null);
 
             const EMOJI_OPTIONS = ['🎨', '🖼️', '🔑', '📿', '🏷️', '🧸', '🧶', '🪴', '🧦', '🧁', '🍪', '📖'];
 
-            React.useEffect(() => {
-                if (showCamera) {
-                    let isMounted = true;
-                    setCameraLoading(true);
-                    setCameraError(null);
-
-                    const timeoutId = setTimeout(() => {
-                        if (isMounted && cameraLoading) {
-                            setCameraLoading(false);
-                            setCameraError('鏡頭啟動逾時。沙盒預覽或瀏覽器限制了即時鏡頭存取，請點選「相簿選擇」！');
-                        }
-                    }, 4000);
-
-                    const startCamera = async () => {
-                        try {
-                            let stream = null;
-                            try {
-                                stream = await navigator.mediaDevices.getUserMedia({ 
-                                    video: { facingMode: { ideal: 'environment' } }, 
-                                    audio: false 
-                                });
-                            } catch (e1) {
-                                stream = await navigator.mediaDevices.getUserMedia({ 
-                                    video: true, 
-                                    audio: false 
-                                });
-                            }
-
-                            clearTimeout(timeoutId);
-                            if (!isMounted) {
-                                if (stream) stream.getTracks().forEach(t => t.stop());
-                                return;
-                            }
-
-                            streamRef.current = stream;
-                            setCameraLoading(false);
-
-                            if (videoRef.current) {
-                                videoRef.current.srcObject = stream;
-                                try {
-                                    await videoRef.current.play();
-                                } catch (playErr) {
-                                    console.log("Auto-play prevented or handled", playErr);
-                                }
-                            }
-                        } catch (err) {
-                            clearTimeout(timeoutId);
-                            console.warn("Camera access failed:", err);
-                            if (isMounted) {
-                                setCameraLoading(false);
-                                setCameraError('無法存取即時鏡頭。請點擊「相簿選擇」上傳照片。');
-                            }
-                        }
-                    };
-
-                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                        startCamera();
-                    } else {
-                        clearTimeout(timeoutId);
-                        setCameraLoading(false);
-                        setCameraError('當前環境不支援即時鏡頭，請使用「相簿選擇」。');
-                    }
-
-                    return () => {
-                        isMounted = false;
-                        clearTimeout(timeoutId);
-                        if (streamRef.current) {
-                            streamRef.current.getTracks().forEach(track => track.stop());
-                            streamRef.current = null;
-                        }
-                    };
-                }
-            }, [showCamera]);
-
-            const takeSnapShot = () => {
-                if (!videoRef.current) return;
-                const video = videoRef.current;
-                const canvas = document.createElement('canvas');
-                const maxDim = 400;
-                let w = video.videoWidth || 640;
-                let h = video.videoHeight || 480;
-
-                if (w > h) {
-                    if (w > maxDim) { h = Math.round((h * maxDim) / w); w = maxDim; }
-                } else {
-                    if (h > maxDim) { w = Math.round((w * maxDim) / h); h = maxDim; }
-                }
-
-                canvas.width = w;
-                canvas.height = h;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(video, 0, 0, w, h);
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
-                
-                setImage(compressedBase64);
-                setShowCamera(false);
-            };
-
-            const handlePhotoUpload = (e) => {
-                const file = e.target.files && e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_SIZE = 300;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_SIZE) {
-                                height *= MAX_SIZE / width;
-                                width = MAX_SIZE;
-                            }
-                        } else {
-                            if (height > MAX_SIZE) {
-                                width *= MAX_SIZE / height;
-                                height = MAX_SIZE;
-                            }
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-                        setImage(compressedBase64);
-                        setShowCamera(false);
-                    };
-                    img.src = event.target.result;
-                };
-                reader.readAsDataURL(file);
-            };
-
             return (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in">
-                    <div className="bg-white w-full max-w-xs rounded-3xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <h3 className="font-black text-base text-slate-800">
-                            {product ? '修改商品資料' : '新增市集商品'}
-                        </h3>
-
-                        {showCamera ? (
-                            <div className="space-y-3 bg-slate-900 p-3 rounded-2xl text-center text-white">
-                                <div className="relative rounded-xl overflow-hidden bg-black aspect-square flex items-center justify-center">
-                                    <video 
-                                        ref={videoRef} 
-                                        autoPlay 
-                                        playsInline 
-                                        muted 
-                                        className={`w-full h-full object-cover ${cameraLoading || cameraError ? 'hidden' : 'block'}`}
-                                    />
-                                    {cameraLoading && (
-                                        <div className="text-center p-4 absolute inset-0 flex flex-col items-center justify-center bg-black/80">
-                                            <i className="fa-solid fa-spinner fa-spin text-3xl text-amber-400 mb-2"></i>
-                                            <p className="text-xs font-bold text-slate-300">正在開啟鏡頭...</p>
-                                        </div>
-                                    )}
-                                    {cameraError && !cameraLoading && (
-                                        <div className="text-center p-3 text-rose-300 text-xs space-y-2 absolute inset-0 flex flex-col items-center justify-center bg-black/90">
-                                            <i className="fa-solid fa-triangle-exclamation text-2xl text-amber-400"></i>
-                                            <p className="font-bold leading-relaxed">{cameraError}</p>
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 border-2 border-white/30 rounded-xl pointer-events-none"></div>
-                                </div>
-
-                                <div className="flex gap-2">
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setShowCamera(false)} 
-                                        className="flex-1 py-2 rounded-xl bg-slate-800 text-xs font-bold text-slate-300"
-                                    >
-                                        返回
-                                    </button>
-
-                                    {!cameraError && !cameraLoading && (
-                                        <button 
-                                            type="button" 
-                                            onClick={takeSnapShot} 
-                                            className="flex-1 py-2 rounded-xl bg-amber-400 text-xs font-black text-slate-900 shadow-lg flex items-center justify-center gap-1"
-                                        >
-                                            <i className="fa-solid fa-camera"></i> 快門拍照
-                                        </button>
-                                    )}
-
-                                    <label className="flex-1 py-2 rounded-xl bg-sky-500 text-xs font-black text-white shadow-lg flex items-center justify-center gap-1 cursor-pointer">
-                                        <i className="fa-solid fa-image"></i> 相簿選擇
-                                        <input 
-                                            type="file" 
-                                            accept="image/*" 
-                                            className="hidden" 
-                                            onChange={handlePhotoUpload}
-                                        />
-                                    </label>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-3 text-xs">
-                                {formError && (
-                                    <div className="bg-rose-100 border border-rose-300 text-rose-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
-                                        <i className="fa-solid fa-circle-exclamation"></i>
-                                        <span>{formError}</span>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="font-bold text-slate-600 block mb-1">商品相片 / 圖示</label>
-                                    
-                                    {image ? (
-                                        <div className="flex items-center space-x-3 bg-slate-50 p-2 rounded-2xl border border-slate-200">
-                                            <img src={image} alt="預覽" className="w-14 h-14 object-cover rounded-xl shadow-sm border border-white shrink-0" />
-                                            <div className="flex-1">
-                                                <p className="font-bold text-slate-700 text-xs">已選擇商品相片</p>
-                                                <p className="text-[10px] text-slate-400">尺寸最佳化完成</p>
-                                            </div>
-                                            <button 
-                                                type="button"
-                                                onClick={() => setImage('')}
-                                                className="text-xs text-rose-500 hover:text-rose-700 font-bold p-2 bg-rose-50 rounded-xl shrink-0"
-                                            >
-                                                移除
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setShowCamera(true)}
-                                                    className="flex flex-col items-center justify-center py-2.5 px-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 rounded-2xl font-bold transition-all active:scale-95"
-                                                >
-                                                    <i className="fa-solid fa-video text-base text-amber-600 mb-0.5"></i>
-                                                    <span className="text-[10px]">即時鏡頭</span>
-                                                </button>
-
-                                                <label className="flex flex-col items-center justify-center py-2.5 px-1 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-900 rounded-2xl font-bold cursor-pointer transition-all active:scale-95">
-                                                    <i className="fa-solid fa-image text-base text-sky-600 mb-0.5"></i>
-                                                    <span className="text-[10px]">相簿選擇</span>
-                                                    <input 
-                                                        type="file" 
-                                                        accept="image/*" 
-                                                        className="hidden" 
-                                                        onChange={handlePhotoUpload}
-                                                    />
-                                                </label>
-                                            </div>
-
-                                            <div className="text-center text-[10px] text-slate-400 font-bold pt-1">或選擇預設可愛圖示</div>
-                                            <div className="grid grid-cols-6 gap-1 bg-slate-50 p-2 rounded-xl">
-                                                {EMOJI_OPTIONS.map(e => (
-                                                    <button 
-                                                        key={e} 
-                                                        type="button"
-                                                        onClick={() => { setIcon(e); setImage(''); }}
-                                                        className={`p-1.5 rounded-lg text-lg ${icon === e && !image ? 'bg-amber-300 shadow-sm' : 'hover:bg-slate-200'}`}
-                                                    >
-                                                        {e}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="font-bold text-slate-600 block mb-1">商品名稱</label>
-                                    <input 
-                                        type="text" 
-                                        value={name}
-                                        onChange={(e) => { setName(e.target.value); setFormError(''); }}
-                                        placeholder="例如: 手作黏土公仔"
-                                        className="w-full p-2.5 border rounded-xl font-bold outline-none focus:border-amber-400"
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="font-bold text-slate-600 block mb-1">單價 ($)</label>
-                                        <input 
-                                            type="number" 
-                                            value={price}
-                                            onChange={(e) => setPrice(Number(e.target.value))}
-                                            className="w-full p-2.5 border rounded-xl font-bold outline-none focus:border-amber-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="font-bold text-slate-600 block mb-1">庫存數量</label>
-                                        <input 
-                                            type="number" 
-                                            value={stock}
-                                            onChange={(e) => setStock(Number(e.target.value))}
-                                            className="w-full p-2.5 border rounded-xl font-bold outline-none focus:border-amber-400"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {!showCamera && (
-                            <div className="flex space-x-2 pt-2">
-                                {product && (
-                                    <button 
-                                        onClick={() => onDelete(product.id)}
-                                        className="bg-rose-100 text-rose-600 font-bold px-3 py-2.5 rounded-xl text-xs"
-                                    >
-                                        刪除
-                                    </button>
-                                )}
-                                <button 
-                                    type="button" 
-                                    onClick={onClose}
-                                    className="flex-1 bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs"
-                                >
-                                    取消
-                                </button>
-                                <button 
-                                    type="button" 
-                                    onClick={() => {
-                                        if(!name.trim()) {
-                                            setFormError('請輸入商品名稱！');
-                                            return;
-                                        }
-                                        onSave({
-                                            ...product,
-                                            name: name.trim(),
-                                            price: Number(price) || 0,
-                                            stock: Number(stock) || 0,
-                                            icon: icon,
-                                            image: image
-                                        });
-                                    }}
-                                    className="flex-1 bg-amber-400 text-slate-900 font-black py-2.5 rounded-xl text-xs shadow-md"
-                                >
-                                    儲存
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        }
-
-        function SettingsView({ shopName, setShopName, paymentMethods, setPaymentMethods, printerSettings, setPrinterSettings, printSpeed, setPrintSpeed, resetDemoData }) {
-            const [showResetConfirm, setShowResetConfirm] = React.useState(false);
-            const [activePayTab, setActivePayTab] = React.useState(paymentMethods[0]?.id || 'pay_mpay');
-            const [settingTab, setSettingTab] = React.useState('shop'); // 'shop', 'printer', 'payments', 'data'
-
-            const handleQRUpload = (id, event) => {
-                const file = event.target.files && event.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const base64Img = e.target.result;
-                    setPaymentMethods(paymentMethods.map(m => m.id === id ? { ...m, qr: base64Img } : m));
-                };
-                reader.readAsDataURL(file);
-            };
-
-            const removeQR = (id) => {
-                setPaymentMethods(paymentMethods.map(m => m.id === id ? { ...m, qr: '' } : m));
-            };
-
-            const selectedPayMethod = paymentMethods.find(m => m.id === activePayTab) || paymentMethods[0];
-
-            return (
-                <div className="p-4 space-y-4">
-                    <div>
-                        <h2 className="text-base font-bold text-slate-800">系統設定</h2>
-                        <p className="text-xs text-slate-500">點擊分頁標籤切換管理項目</p>
-                    </div>
-
-                    {/* 頂部四頁籤導覽 */}
-                    <div className="grid grid-cols-4 gap-1 bg-slate-200 p-1 rounded-2xl shadow-inner text-[11px] font-bold">
-                        <button
-                            onClick={() => setSettingTab('shop')}
-                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
-                                settingTab === 'shop'
-                                    ? 'bg-white text-slate-900 shadow-md font-black'
-                                    : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                        >
-                            <i className="fa-solid fa-store text-amber-500"></i>
-                            <span className="truncate">攤位資料</span>
-                        </button>
-
-                        <button
-                            onClick={() => setSettingTab('printer')}
-                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
-                                settingTab === 'printer'
-                                    ? 'bg-white text-slate-900 shadow-md font-black'
-                                    : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                        >
-                            <i className="fa-solid fa-print text-amber-500"></i>
-                            <span className="truncate">小票打印</span>
-                        </button>
-
-                        <button
-                            onClick={() => setSettingTab('payments')}
-                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
-                                settingTab === 'payments'
-                                    ? 'bg-white text-slate-900 shadow-md font-black'
-                                    : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                        >
-                            <i className="fa-solid fa-qrcode text-sky-500"></i>
-                            <span className="truncate">收款 QR</span>
-                        </button>
-
-                        <button
-                            onClick={() => setSettingTab('data')}
-                            className={`py-2 px-0.5 rounded-xl transition-all flex items-center justify-center gap-1 ${
-                                settingTab === 'data'
-                                    ? 'bg-white text-slate-900 shadow-md font-black'
-                                    : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                        >
-                            <i className="fa-solid fa-sliders text-rose-500"></i>
-                            <span className="truncate">資料維護</span>
-                        </button>
-                    </div>
-
-                    {/* 分頁 1：攤位基本資料 */}
-                    {settingTab === 'shop' && (
-                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 pop-in">
-                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
-                                <i className="fa-solid fa-store text-amber-500 text-sm"></i>
-                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">攤位基本資料</h3>
-                            </div>
-
-                            <div>
-                                <label className="text-[11px] font-bold text-slate-500 block mb-1">攤位 / 店舖名稱：</label>
-                                <input 
-                                    type="text" 
-                                    value={shopName}
-                                    onChange={(e) => setShopName(e.target.value)}
-                                    placeholder="例如: 小晴的手作品牌"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-extrabold outline-none focus:border-amber-400"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                    <label className="font-bold text-slate-500 block mb-1">攤位編號 / 位置：</label>
-                                    <input 
-                                        type="text" 
-                                        value={printerSettings.stallNo}
-                                        onChange={(e) => setPrinterSettings({ ...printerSettings, stallNo: e.target.value })}
-                                        placeholder="例如: 攤位 A-08"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="font-bold text-slate-500 block mb-1">IG / 社群帳號：</label>
-                                    <input 
-                                        type="text" 
-                                        value={printerSettings.socialAccount}
-                                        onChange={(e) => setPrinterSettings({ ...printerSettings, socialAccount: e.target.value })}
-                                        placeholder="例如: @kids_craft"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 font-bold outline-none focus:border-amber-400"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-1">攤位標語 / 品牌口號：</label>
-                                <input 
-                                    type="text" 
-                                    value={printerSettings.slogan}
-                                    onChange={(e) => setPrinterSettings({ ...printerSettings, slogan: e.target.value })}
-                                    placeholder="例如: 純手工打造，帶走一份小幸運"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
-                                />
-                            </div>
+                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 pop-in">
+                    <div className="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center border-b pb-2">
+                            <h3 className="font-black text-sm text-slate-800">
+                                {product ? '編輯商品資訊' : '新增手作商品'}
+                            </h3>
+                            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1">
+                                <i className="fa-solid fa-xmark text-lg"></i>
+                            </button>
                         </div>
-                    )}
 
-                    {/* 分頁 2：小票打印機與樣式設定 */}
-                    {settingTab === 'printer' && (
-                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4 pop-in">
-                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
-                                <i className="fa-solid fa-print text-amber-500 text-sm"></i>
-                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">小票打印機與樣式設定</h3>
+                        <div className="space-y-3 text-xs">
+                            <div>
+                                <label className="font-bold text-slate-600 block mb-1">商品名稱：</label>
+                                <input 
+                                    type="text" value={name} onChange={(e) => setName(e.target.value)}
+                                    placeholder="例如: 羊毛氈吊飾"
+                                    className="w-full border rounded-xl px-3 py-2 font-bold outline-none focus:border-amber-400"
+                                />
                             </div>
 
-                            {/* 小票寬度與紙張質感 */}
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 block mb-1">小票紙張寬度：</label>
-                                    <div className="grid grid-cols-2 gap-1">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setPrinterSettings({ ...printerSettings, paperWidth: '58mm' })}
-                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
-                                                (printerSettings.paperWidth || '58mm') === '58mm' 
-                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
-                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                                            }`}
-                                        >
-                                            58mm 標準
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setPrinterSettings({ ...printerSettings, paperWidth: '80mm' })}
-                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
-                                                printerSettings.paperWidth === '80mm' 
-                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
-                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                                            }`}
-                                        >
-                                            80mm 寬版
-                                        </button>
-                                    </div>
+                                    <label className="font-bold text-slate-600 block mb-1">單價 ($)：</label>
+                                    <input 
+                                        type="number" value={price} onChange={(e) => setPrice(Number(e.target.value))}
+                                        className="w-full border rounded-xl px-3 py-2 font-bold outline-none focus:border-amber-400"
+                                    />
                                 </div>
-
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 block mb-1">小票紙張質感：</label>
-                                    <div className="grid grid-cols-2 gap-1">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'warm' })}
-                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
-                                                printerSettings.paperTheme === 'warm' 
-                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
-                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                                            }`}
-                                        >
-                                            復古米黃
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setPrinterSettings({ ...printerSettings, paperTheme: 'pure' })}
-                                            className={`py-1.5 rounded-xl font-bold text-[11px] border transition-all ${
-                                                printerSettings.paperTheme === 'pure' 
-                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm' 
-                                                    : 'bg-slate-50 border-slate-200 text-slate-600'
-                                            }`}
-                                        >
-                                            純白熱敏
-                                        </button>
-                                    </div>
+                                    <label className="font-bold text-slate-600 block mb-1">庫存數量：</label>
+                                    <input 
+                                        type="number" value={stock} onChange={(e) => setStock(Number(e.target.value))}
+                                        className="w-full border rounded-xl px-3 py-2 font-bold outline-none focus:border-amber-400"
+                                    />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-slate-500 block mb-1">頁尾感謝語 / 優惠標語：</label>
-                                <input 
-                                    type="text" 
-                                    value={printerSettings.thanksMsg}
-                                    onChange={(e) => setPrinterSettings({ ...printerSettings, thanksMsg: e.target.value })}
-                                    placeholder="例如: 感謝支持小老闆的手作夢想！"
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none focus:border-amber-400"
-                                />
-                            </div>
-
-                            {/* 紙張開關 */}
-                            <div className="space-y-2 pt-2 border-t border-slate-100">
-                                <div className="flex justify-between items-center text-xs">
-                                    <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={printerSettings.showSignature}
-                                            onChange={(e) => setPrinterSettings({ ...printerSettings, showSignature: e.target.checked })}
-                                            className="accent-amber-500 rounded w-4 h-4"
-                                        />
-                                        <span>顯示小老闆簽名欄</span>
-                                    </label>
-
-                                    <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-700">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={printerSettings.showSocialQr}
-                                            onChange={(e) => setPrinterSettings({ ...printerSettings, showSocialQr: e.target.checked })}
-                                            className="accent-amber-500 rounded w-4 h-4"
-                                        />
-                                        <span>顯示社群追蹤 QR</span>
-                                    </label>
-                                </div>
-
-                                {/* 社群 QR Code 圖片上傳區塊 */}
-                                {printerSettings.showSocialQr && (
-                                    <div className="space-y-2 pt-2 border-t border-slate-100">
-                                        <label className="text-xs font-bold text-slate-700 block">社群追蹤 QR Code 圖片：</label>
-                                        {printerSettings.socialQrImage ? (
-                                            <div className="flex items-center space-x-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                                                <img src={printerSettings.socialQrImage} alt="社群 QR" className="w-16 h-16 object-contain rounded border bg-white shrink-0" />
-                                                <div className="flex-1 space-y-1">
-                                                    <p className="text-xs text-slate-800 font-bold">已設定社群 QR Code</p>
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => setPrinterSettings({ ...printerSettings, socialQrImage: '' })}
-                                                        className="text-xs text-rose-500 font-bold hover:underline"
-                                                    >
-                                                        移除並重新上傳
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <label className="flex items-center justify-center gap-2 p-3 bg-slate-50 border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl cursor-pointer transition-colors text-xs font-bold text-slate-600">
-                                                <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-base"></i>
-                                                <span>上傳 IG / FB 追蹤 QR Code 圖片</span>
-                                                <input 
-                                                    type="file" 
-                                                    accept="image/*" 
-                                                    className="hidden" 
-                                                    onChange={(e) => {
-                                                        const file = e.target.files && e.target.files[0];
-                                                        if (file) {
-                                                            const reader = new FileReader();
-                                                            reader.onload = (ev) => {
-                                                                setPrinterSettings({ ...printerSettings, socialQrImage: ev.target.result });
-                                                            };
-                                                            reader.readAsDataURL(file);
-                                                        }
-                                                    }}
-                                                />
-                                            </label>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 出紙速度 */}
-                            <div className="space-y-2 pt-2 border-t border-slate-100">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                        <i className="fa-solid fa-gauge-high text-amber-500"></i>
-                                        小票出紙列印速度
-                                    </span>
-                                    <span className="text-[11px] text-slate-400 font-bold">{printSpeed === '0' ? '關閉動畫' : `${printSpeed} 秒`}</span>
-                                </div>
-                                <div className="grid grid-cols-4 gap-1.5">
-                                    {[
-                                        { label: '極速 1.5s', val: '1.5' },
-                                        { label: '標準 4.5s', val: '4.5' },
-                                        { label: '慢速 7s', val: '7.0' },
-                                        { label: '關閉動畫', val: '0' }
-                                    ].map(opt => (
-                                        <button
-                                            key={opt.val}
-                                            type="button"
-                                            onClick={() => setPrintSpeed(opt.val)}
-                                            className={`py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                                                printSpeed === opt.val
-                                                    ? 'bg-amber-400 border-amber-500 text-slate-900 shadow-sm'
-                                                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                <label className="font-bold text-slate-600 block mb-1">選擇 Icon 圖示：</label>
+                                <div className="grid grid-cols-6 gap-1 bg-slate-50 p-2 rounded-xl border">
+                                    {EMOJI_OPTIONS.map(e => (
+                                        <button 
+                                            key={e} type="button" onClick={() => { setIcon(e); setImage(''); }}
+                                            className={`h-8 text-lg rounded-lg flex items-center justify-center ${
+                                                icon === e && !image ? 'bg-amber-200 border border-amber-400' : 'hover:bg-slate-200'
                                             }`}
                                         >
-                                            {opt.label}
+                                            {e}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                        </div>
-                    )}
 
-                    {/* 分頁 3：電子支付收款圖碼 */}
-                    {settingTab === 'payments' && (
-                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 pop-in">
-                            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                                <div className="flex items-center space-x-2">
-                                    <i className="fa-solid fa-qrcode text-sky-500 text-sm"></i>
-                                    <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">電子支付收款圖碼</h3>
-                                </div>
-                                <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
-                                    已設定 {paymentMethods.filter(m => m.qr).length} / {paymentMethods.length}
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
-                                {paymentMethods.map(method => (
-                                    <button
-                                        key={method.id}
-                                        onClick={() => setActivePayTab(method.id)}
-                                        className={`py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all flex flex-col items-center justify-center gap-0.5 relative ${
-                                            activePayTab === method.id
-                                                ? 'bg-white text-slate-900 shadow-sm'
-                                                : 'text-slate-500 hover:text-slate-800'
-                                        }`}
-                                    >
-                                        <i className={`fa-solid ${method.icon} text-xs ${method.qr ? 'text-emerald-500' : 'text-slate-400'}`}></i>
-                                        <span className="truncate w-full text-center">{method.name.split(' ')[0]}</span>
-                                        {method.qr && (
-                                            <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {selectedPayMethod && (
-                                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center space-x-2">
-                                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs ${selectedPayMethod.color}`}>
-                                                <i className={`fa-solid ${selectedPayMethod.icon}`}></i>
-                                            </div>
-                                            <span className="font-extrabold text-xs text-slate-800">{selectedPayMethod.name}</span>
-                                        </div>
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${selectedPayMethod.qr ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {selectedPayMethod.qr ? '已設定收款碼' : '未設定'}
-                                        </span>
+                            <div>
+                                <label className="font-bold text-slate-600 block mb-1">相簿照片上傳：</label>
+                                {image ? (
+                                    <div className="relative w-20 h-20 rounded-xl overflow-hidden border">
+                                        <img src={image} alt="預覽" className="w-full h-full object-cover" />
+                                        <button onClick={() => setImage('')} className="absolute top-1 right-1 bg-rose-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center font-bold">
+                                            ✕
+                                        </button>
                                     </div>
-
-                                    {selectedPayMethod.qr ? (
-                                        <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-slate-200">
-                                            <img src={selectedPayMethod.qr} alt={selectedPayMethod.name} className="w-20 h-20 object-contain rounded-lg border shrink-0" />
-                                            <div className="flex-1 space-y-1">
-                                                <p className="text-xs text-slate-800 font-bold">收款 QR Code 運作中</p>
-                                                <p className="text-[10px] text-slate-400">結帳時選擇 {selectedPayMethod.name} 將自動展示此圖</p>
-                                                <button 
-                                                    onClick={() => removeQR(selectedPayMethod.id)}
-                                                    className="text-xs text-rose-500 hover:text-rose-700 font-bold underline text-[11px] pt-1 block"
-                                                >
-                                                    刪除並重新上傳
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <label className="block w-full border-2 border-dashed border-slate-300 hover:border-amber-400 rounded-xl p-4 text-center cursor-pointer transition-colors bg-white">
-                                            <i className="fa-solid fa-cloud-arrow-up text-amber-500 text-xl mb-1 block"></i>
-                                            <span className="text-xs font-bold text-slate-700 block">上傳 {selectedPayMethod.name} 收款碼照片</span>
-                                            <span className="text-[10px] text-slate-400 block mt-0.5">支援從手機相簿選擇圖片</span>
-                                            <input 
-                                                type="file" 
-                                                accept="image/*" 
-                                                className="hidden" 
-                                                onChange={(e) => handleQRUpload(selectedPayMethod.id, e)}
-                                            />
-                                        </label>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* 分頁 3：資料維護 */}
-                    {settingTab === 'data' && (
-                        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3 pop-in">
-                            <div className="flex items-center space-x-2 border-b border-slate-100 pb-2">
-                                <i className="fa-solid fa-triangle-exclamation text-rose-500 text-sm"></i>
-                                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">資料維護與重置</h3>
+                                ) : (
+                                    <label className="flex items-center justify-center gap-2 p-2.5 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-amber-400 text-slate-500 font-bold">
+                                        <i className="fa-solid fa-image text-amber-500"></i>
+                                        <span>從相簿選擇圖片</span>
+                                        <input 
+                                            type="file" accept="image/*" className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files && e.target.files[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onload = (ev) => setImage(ev.target.result);
+                                                    reader.readAsDataURL(file);
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                )}
                             </div>
+                        </div>
 
-                            <p className="text-xs text-slate-500">如果想在新的市集活動開始前清空測試數據，可以在這裡恢復成預設狀態。</p>
-
-                            {!showResetConfirm ? (
+                        <div className="flex gap-2 pt-2 border-t">
+                            {product && (
                                 <button 
-                                    onClick={() => setShowResetConfirm(true)}
-                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition-colors border border-slate-200 flex items-center justify-center gap-1.5"
+                                    onClick={() => onDelete(product.id)}
+                                    className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-2 rounded-xl text-xs border border-rose-200"
                                 >
-                                    <i className="fa-solid fa-rotate-left text-slate-500"></i>
-                                    <span>重置所有資料與範例商品</span>
+                                    刪除
                                 </button>
-                            ) : (
-                                <div className="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl text-center space-y-2">
-                                    <p className="text-xs font-bold text-rose-700">確定重置為預設資料？所有商品與銷售紀錄將被清除。</p>
-                                    <div className="flex gap-2 justify-center pt-1">
-                                        <button 
-                                            onClick={() => { resetDemoData(); setShowResetConfirm(false); }}
-                                            className="bg-rose-600 text-white font-bold px-4 py-1.5 rounded-xl text-xs shadow-sm"
-                                        >
-                                            確認重置
-                                        </button>
-                                        <button 
-                                            onClick={() => setShowResetConfirm(false)}
-                                            className="bg-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl text-xs"
-                                        >
-                                            取消
-                                        </button>
-                                    </div>
-                                </div>
                             )}
+                            <button 
+                                onClick={() => {
+                                    if (!name.trim()) return;
+                                    onSave({ ...product, name, price, stock, icon, image });
+                                }}
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-2.5 rounded-xl text-xs shadow-md"
+                            >
+                                儲存商品
+                            </button>
                         </div>
-                    )}
+                    </div>
                 </div>
             );
         }
