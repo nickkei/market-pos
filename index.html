@@ -40,13 +40,15 @@
             height: 100vh;
             height: 100dvh;
         }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+        /* 全站隱藏滾動條但保留滾動功能 */
+        *::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #CBD5E1;
-            border-radius: 999px;
+        * {
+            -ms-overflow-style: none !important;
+            scrollbar-width: none !important;
         }
         .bounce-active:active {
             transform: scale(0.95);
